@@ -1,0 +1,4 @@
+# Ignore workspace and library files
+*.wsw
+library/
+ALU_Multimedia/ # If this is also an output/temporary folder
