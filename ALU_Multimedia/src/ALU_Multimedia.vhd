@@ -70,6 +70,8 @@ begin
         --Variables to store 65 bit difference values to perform clipping
         variable diff_low_65  : SIGNED(64 downto 0);
         variable diff_high_65 : SIGNED(64 downto 0);
+		
+		
     begin
         case instr is
             when "00000" =>  -- Load Immediate
@@ -236,7 +238,65 @@ begin
             when "01110" =>  -- OR
             when "01111" =>  -- BCW
             when "10000" =>  -- MAXWS
+			
+			--Working on Slice 4
+				if(SIGNED(rs1(127 downto 96)) > SIGNED(rs2(127 downto 96)))then
+					rd(127 downto 96) <= rs1(127 downto 96); --Copying greater 32 bits into slice 4 of rd
+				else
+					rd(127 downto 96) <= rs2(127 downto 96); --Copying rs2 slice because it is bigger
+				end if;  
+				
+				--Working on Slice 3	
+				if(SIGNED(rs1(95 downto 64)) > SIGNED(rs2(95 downto 64)))then
+					rd(95 downto 64) <= rs1(95 downto 64); --Copying greater 32 bits into slice 3 of rd
+				else
+					rd(95 downto 64) <= rs2(95 downto 64); --Copying rs2 slice because it is bigger
+				end if; 
+				
+				--Working on Slice 2	
+				if(SIGNED(rs1(63 downto 32)) > SIGNED(rs2(63 downto 32)))then
+					rd(63 downto 32) <= rs1(63 downto 32); --Copying greater 32 bits into slice 2 of rd
+				else
+					rd(63 downto 32) <= rs2(63 downto 32); --Copying rs2 slice because it is bigger
+				end if; --Operation done for slice 2
+				
+				--Working on Slice 1
+				if(SIGNED(rs1(31 downto 0)) > SIGNED(rs2(31 downto 0)))then
+					rd(31 downto 0) <= rs1(31 downto 0); --Copying greater 32 bits into slice 1 of rd
+				else
+					rd(31 downto 0) <= rs2(31 downto 0); --Copying rs2 slice because it is bigger
+				end if; 
+					
             when "10001" =>  -- MINWS
+			
+				--Working on Slice 4
+				if(SIGNED(rs1(127 downto 96)) < SIGNED(rs2(127 downto 96)))then
+					rd(127 downto 96) <= rs1(127 downto 96); --Copying smaller 32 bits into slice 4 of rd
+				else
+					rd(127 downto 96) <= rs2(127 downto 96); --Copying rs2 slice because it is smaller
+				end if;  
+				
+				--Working on Slice 3	
+				if(SIGNED(rs1(95 downto 64)) < SIGNED(rs2(95 downto 64)))then
+					rd(95 downto 64) <= rs1(95 downto 64); --Copying smaller 32 bits into slice 3 of rd
+				else
+					rd(95 downto 64) <= rs2(95 downto 64); --Copying rs2 slice because it is smaller
+				end if; 
+				
+				--Working on Slice 2	
+				if(SIGNED(rs1(63 downto 32)) < SIGNED(rs2(63 downto 32)))then
+					rd(63 downto 32) <= rs1(63 downto 32); --Copying smaller 32 bits into slice 2 of rd
+				else
+					rd(63 downto 32) <= rs2(63 downto 32); --Copying rs2 slice because it is smaller
+				end if; --Operation done for slice 2
+				
+				--Working on Slice 1
+				if(SIGNED(rs1(31 downto 0)) < SIGNED(rs2(31 downto 0)))then
+					rd(31 downto 0) <= rs1(31 downto 0); --Copying smaller 32 bits into slice 1 of rd
+				else
+					rd(31 downto 0) <= rs2(31 downto 0); --Copying rs2 slice because it is smaller
+				end if; 
+					
             when "10010" =>  -- MLHU
             when "10011" =>  -- MLHCU
             when "10100" =>  -- AND
