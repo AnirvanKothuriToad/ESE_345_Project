@@ -1,4 +1,11 @@
-# Ignore workspace and library files
-*.wsw
-library/
-ALU_Multimedia/ # If this is also an output/temporary folder
+# 1. Ignore EVERYTHING by default
+*
+
+# 2. But, "un-ignore" directories so Git can look inside them
+!*/
+
+# 3. "Un-ignore" this .gitignore file itself
+!.gitignore
+
+# 4. "Un-ignore" all VHDL files (files ending in .vhd)
+!*.vhd
