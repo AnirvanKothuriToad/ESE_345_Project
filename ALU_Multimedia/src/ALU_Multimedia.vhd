@@ -29,10 +29,10 @@ use IEEE.numeric_std.all;
 entity ALU is
 	port(
 		instr : in STD_LOGIC_VECTOR(5 downto 0);
-		rs3 : out STD_LOGIC_VECTOR(127 downto 0)
-		rs2 : out STD_LOGIC_VECTOR(127 downto 0)
-		rs1 : out STD_LOGIC_VECTOR(127 downto 0)
-		rd : out STD_LOGIC_VECTOR(127 downto 0);
+		rs3 : in STD_LOGIC_VECTOR(127 downto 0);
+		rs2 : in STD_LOGIC_VECTOR(127 downto 0);
+		rs1 : in STD_LOGIC_VECTOR(127 downto 0);
+		rd : out STD_LOGIC_VECTOR(127 downto 0)
 	);
 end ALU;
 
@@ -51,22 +51,32 @@ begin
 		variable sum_low : SIGNED(63 downto 0);  
 		variable sum_high : SIGNED(63 downto 0);
 		
+		--Variables to store 64 bit difference values
+		variable diff_low : SIGNED(63 downto 0);  
+		variable diff_high : SIGNED(63 downto 0);
+		
 		--Variables to store 65 bit sum values to perform clipping
 		variable sum_low_65 : SIGNED(64 downto 0); 
-		variable sum_high_65 : SIGNED(64 downto 0);
+		variable sum_high_65 : SIGNED(64 downto 0);	
+		
+		--Variables to store 65 bit difference values to perform clipping
+		variable diff_low_65 : SIGNED(64 downto 0); 
+		variable diff_high_65 : SIGNED(64 downto 0);
 	begin
     	case instr
         	when "00000" =>    -- Load Immediate 
 				case ld_in
-			        when "000" => rd <= rd(127 downto 16) + imm;
-			        when "001" => rd <= rd(127 downto 32) + imm + rd(15 downto 0);
-			        when "010" => rd <= rd(127 downto 48) + imm + rd(31 downto 0);
-			        when "011" => rd <= rd(127 downto 64) + imm + rd(47 downto 0);
-			        when "100" => rd <= rd(127 downto 80) + imm + rd(63 downto 0);
-			        when "101" => rd <= rd(127 downto 96) + imm + rd(79 downto 0);
-			        when "110" => rd <= rd(127 downto 112) + imm + rd(95 downto 0);
-			        when "111" => rd <= imm + rd(111 downto 0);
-
+			        when "000" => rd <= rd(127 downto 16) & imm;
+			        when "001" => rd <= rd(127 downto 32) & imm & rd(15 downto 0);
+			        when "010" => rd <= rd(127 downto 48) & imm & rd(31 downto 0);
+			        when "011" => rd <= rd(127 downto 64) & imm & rd(47 downto 0);
+			        when "100" => rd <= rd(127 downto 80) & imm & rd(63 downto 0);
+			        when "101" => rd <= rd(127 downto 96) & imm & rd(79 downto 0);
+			        when "110" => rd <= rd(127 downto 112) & imm & rd(95 downto 0);
+			        when "111" => rd <= imm & rd(111 downto 0);
+				    when others => rd <= (others => 'X');  
+				end case;
+		
 	        -- Multiply-Add and Multiply-Subtract R4-Instruction Format
 	        when "00001" => -- Signed Integer Multiply-Add Low with Saturation 
 	        when "00010" =>    -- Signed Integer Multiply-Add High with Saturation
@@ -103,7 +113,7 @@ begin
 				  end if;  
 				--Transferring sum_high and sum_low into register rd
 				rd(127 downto 64) <= STD_LOGIC_VECTOR(sum_high);	--Assigning sum_high to top half of rd
-				rd(63 downto 0) := STD_LOGIC_VECTOR(sum_low);		--Assigning sum_low to top bottom half of rd
+				rd(63 downto 0) <= STD_LOGIC_VECTOR(sum_low);		--Assigning sum_low to top bottom half of rd
 				
 	        when "00110" =>    -- Signed Long Integer Multiply-Add High with Saturation
 			
@@ -136,10 +146,73 @@ begin
 				  end if;  
 				--Transferring sum_high and sum_low into register rd
 				rd(127 downto 64) <= STD_LOGIC_VECTOR(sum_high);	--Assigning sum_high to top half of rd
-				rd(63 downto 0) := STD_LOGIC_VECTOR(sum_low);		--Assigning sum_low to top bottom half of rd 
+				rd(63 downto 0) <= STD_LOGIC_VECTOR(sum_low);		--Assigning sum_low to top bottom half of rd 
 				
 	        when "00111" =>    -- Signed Long Integer Multiply-Subtract Low with Saturation
-	        when "01000" =>    -- Signed Long Integer Multiply-Subtract High with Saturation
+			
+			  	  product_low := SIGNED(rs2(31 downto 0)) * SIGNED(rs3(31 downto 0)); --computing and storing lower product(Lower 32 Bits)
+				  product_high := SIGNED(rs2(95 downto 64)) * SIGNED(rs3(95 downto 64)); --computing and storing the high product	
+				  
+				  --performing Subtraction with the two product values
+				  diff_low_65 := resize(SIGNED(rs1(63 downto 0)),65) - resize(product_low,65);  --performing signed extension by resizing to 65 bits to perform clipping
+				  diff_high_65 := resize(SIGNED(rs1(127 downto 64)),65) - resize(product_high,65); 
+				  
+				  --checking diff_low and clipping
+				  if(diff_low_65 > resize(SIGNED_64_MAX,65)) then
+					  --Overflow has occured
+					  diff_low := SIGNED_64_MAX; --Clipping by setting sum to the maximum value
+				  elsif(diff_low_65 < resize(SIGNED_64_MIN,65)) then
+					  --Underflow has occured
+					  diff_low := SIGNED_64_MIN; --Clipping for underflow
+				  else
+					  diff_low := resize(diff_low_65, 64); --No clipping is required, so sum is resized to 64 bits
+				  end if;  
+					  --checking diff_high 
+				  if(diff_high_65 > resize(SIGNED_64_MAX,65)) then
+					  --Overflow has occured
+					  diff_high := SIGNED_64_MAX; --Clipping for overflow
+				  elsif(diff_high_65 < resize(SIGNED_64_MIN,65)) then
+					  --Underflow has occured
+					  diff_high := SIGNED_64_MIN; --Clipping for underflow
+				  else
+					  diff_high := resize(diff_high_65, 64); --No clipping is required, so sum is resized to 64 bits
+				  end if;  
+				--Transferring diff_high and diff_low into register rd
+				rd(127 downto 64) <= STD_LOGIC_VECTOR(diff_high);	--Assigning sum_high to top half of rd
+				rd(63 downto 0) <= STD_LOGIC_VECTOR(diff_low);		--Assigning sum_low to top bottom half of rd  
+				
+	        when "01000" =>    -- Signed Long Integer Multiply-Subtract High with Saturation 
+			
+			      product_low := SIGNED(rs2(63 downto 32)) * SIGNED(rs3(63 downto 32)); --computing and storing lower product(Higher 32 Bits)
+				  product_high := SIGNED(rs2(127 downto 96)) * SIGNED(rs3(127 downto 96)); --computing and storing the high product	
+				  
+				  --performing Subtraction with the two product values
+				  diff_low_65 := resize(SIGNED(rs1(63 downto 0)),65) - resize(product_low,65);  --performing signed extension by resizing to 65 bits to perform clipping
+				  diff_high_65 := resize(SIGNED(rs1(127 downto 64)),65) - resize(product_high,65); 
+				  
+				  --checking diff_low and clipping
+				  if(diff_low_65 > resize(SIGNED_64_MAX,65)) then
+					  --Overflow has occured
+					  diff_low := SIGNED_64_MAX; --Clipping by setting sum to the maximum value
+				  elsif(diff_low_65 < resize(SIGNED_64_MIN,65)) then
+					  --Underflow has occured
+					  diff_low := SIGNED_64_MIN; --Clipping for underflow
+				  else
+					  diff_low := resize(diff_low_65, 64); --No clipping is required, so sum is resized to 64 bits
+				  end if;  
+					  --checking diff_high 
+				  if(diff_high_65 > resize(SIGNED_64_MAX,65)) then
+					  --Overflow has occured
+					  diff_high := SIGNED_64_MAX; --Clipping for overflow
+				  elsif(diff_high_65 < resize(SIGNED_64_MIN,65)) then
+					  --Underflow has occured
+					  diff_high := SIGNED_64_MIN; --Clipping for underflow
+				  else
+					  diff_high := resize(diff_high_65, 64); --No clipping is required, so sum is resized to 64 bits
+				  end if;  
+				--Transferring diff_high and diff_low into register rd
+				rd(127 downto 64) <= STD_LOGIC_VECTOR(diff_high);	--Assigning sum_high to top half of rd
+				rd(63 downto 0) <= STD_LOGIC_VECTOR(diff_low);		--Assigning sum_low to top bottom half of rd  
 	
 	        -- R3-Instruction Format
 	        when "01001" =>    -- NOP
@@ -160,6 +233,7 @@ begin
 	        when "11000" =>    -- SFHS
 		
 			-- Invalid
-			when others => 
-
-end structural;	
+			when others => rd<= (others=> 'X');
+	 end case;
+  end process;
+end behavioral;	
