@@ -42,45 +42,87 @@ end ALU;
 
 --}} End of automatically maintained section
 
-architecture behavioral of ALU is
-    --Setting MSB as 0 and everything else as 1
-    constant SIGNED_64_MAX : SIGNED(63 downto 0) := (63 => '0', others => '1');
-    --Setting MSB as 1 and everything else as 0 to obtain the smallest signed number
-    constant SIGNED_64_MIN : SIGNED(63 downto 0) := (63 => '1', others => '0');
+architecture behavioral of ALU is											  
+
+	 --Setting MSB as 0 and everything else as 1
+	constant SIGNED_32_MAX : SIGNED(31 downto 0) := (31 => '0', others => '1');
+	constant SIGNED_64_MAX : SIGNED(63 downto 0) := (63 => '0', others => '1');	  
+	
+	 --Setting MSB as 1 and everything else as 0 to obtain the smallest signed number 
+	constant SIGNED_32_MIN : SIGNED(31 downto 0) := (31 => '1', others => '0');
+    constant SIGNED_64_MIN : SIGNED(63 downto 0) := (63 => '1', others => '0');	 
+	
 begin
 
     process(instr, rs3, rs2, rs1, ld_in, imm) is 
 	
-	--Variables for Signed Multiplty Add High, Low
-        --variable to store product of low 32 bits
-        variable product_low  : SIGNED(63 downto 0);
-        --variable to store product of high 32 bits
-        variable product_high : SIGNED(63 downto 0);
-
-        --Variables to store 64 bit sum values
-        variable sum_low      : SIGNED(63 downto 0);
-        variable sum_high     : SIGNED(63 downto 0);
-
-        --Variables to store 65 bit sum values to perform clipping
-        variable sum_low_65   : SIGNED(64 downto 0);
-        variable sum_high_65  : SIGNED(64 downto 0);
+	--Variables for Signed Multiplty Add High, Low 
 		
-	--Variables for Signed Muliplty subtract High, Low
-		  --Variables to store 64 bit difference values
-        variable diff_low     : SIGNED(63 downto 0);
-        variable diff_high    : SIGNED(63 downto 0); 
+		-- 16 bit variant:	 
 		
-        --Variables to store 65 bit difference values to perform clipping
-        variable diff_low_65  : SIGNED(64 downto 0);
-        variable diff_high_65 : SIGNED(64 downto 0);
+		-- Variables of products (16-bit [half word] values to 32-bit product)
+		variable product_1st_hw : SIGNED(31 downto 0); 
+		variable product_2nd_hw : SIGNED(31 downto 0);
+		variable product_3rd_hw : SIGNED(31 downto 0);
+		variable product_4th_hw : SIGNED(31 downto 0); 	
 		
-		--Variables to hold the 4 products for MLHU and MLHCU
+		-- Store 32-bit sum
+		variable sum_1st_w : SIGNED(31 downto 0);  
+		variable sum_2nd_w : SIGNED(31 downto 0);
+		variable sum_3rd_w : SIGNED(31 downto 0);
+		variable sum_4th_w : SIGNED(31 downto 0);	 
+		
+		-- 33-bit variables to handle clipping
+		variable sum_1st_w_33 : SIGNED(32 downto 0);
+		variable sum_2nd_w_33 : SIGNED(32 downto 0);
+		variable sum_3rd_w_33 : SIGNED(32 downto 0);
+		variable sum_4th_w_33 : SIGNED(32 downto 0);
+		
+		
+		
+		
+		-- 32 bit variant:
+	        --variable to store product of low 32 bits
+	        variable product_low  : SIGNED(63 downto 0);
+	        --variable to store product of high 32 bits
+	        variable product_high : SIGNED(63 downto 0);
+	
+	        --Variables to store 64 bit sum values
+	        variable sum_low      : SIGNED(63 downto 0);
+	        variable sum_high     : SIGNED(63 downto 0);
+	
+	        --Variables to store 65 bit sum values to perform clipping
+	        variable sum_low_65   : SIGNED(64 downto 0);
+	        variable sum_high_65  : SIGNED(64 downto 0);
+			
+		--Variables for Signed Muliplty subtract High, Low	
+			
+			-- 16-bit variant
+			
+			-- 32-bit variant:
+			  --Variables to store 64 bit difference values
+	        variable diff_low     : SIGNED(63 downto 0);
+	        variable diff_high    : SIGNED(63 downto 0); 
+			
+	        --Variables to store 65 bit difference values to perform clipping
+	        variable diff_low_65  : SIGNED(64 downto 0);
+	        variable diff_high_65 : SIGNED(64 downto 0);
+			
+			
+		--Variables to hold the 4 products for MLHU and MLHCU	
 		variable product : UNSIGNED(31 downto 0); --Stores the 32 bit product 
-		variable five_const : UNSIGNED(4 downto 0); --5 bit constant from rs2
+		variable five_const : UNSIGNED(4 downto 0); --5 bit constant from rs2	
+		
+		--Variables for CLZW
+		variable count: INTEGER; --Counter: Only 6 bits are needed as the maximum 0s in a word is 32
+		variable word: UNSIGNED(31 downto 0); --variable to store each word from rs1
 		
     begin
-        case instr is
+        case instr is  
+			----------------------------------
             when "00000" =>  -- Load Immediate
+			----------------------------------	
+			
                 case ld_in is
                     when "000" => rd <= rs1(127 downto 16) & imm;
                     when "001" => rd <= rs1(127 downto 32) & imm & rs1(15 downto 0);
@@ -94,12 +136,142 @@ begin
                 end case;
 
             -- Multiply-Add and Multiply-Subtract R4-Instruction Format
-            when "00001" => -- Signed Integer Multiply-Add Low with Saturation
+			
+			------------------------------------------------------------------
+            when "00001" => -- Signed Integer Multiply-Add Low with Saturation	
+			------------------------------------------------------------------
+				
+				-- Multiply all corresponding low 16-bit values of 32-bit fields in rs2 and rs3
+				product_1st_hw := SIGNED(rs2(15 downto 0)) * SIGNED(rs3(15 downto 0));
+				product_2nd_hw := SIGNED(rs2(47 downto 32)) * SIGNED(rs3(47 downto 32));
+				product_3rd_hw := SIGNED(rs2(79 downto 64)) * SIGNED(rs3(79 downto 64));
+				product_4th_hw := SIGNED(rs2(111 downto 96)) * SIGNED(rs3(111 downto 96));
+				
+				-- Add corresponding 32-bit values with product_x_hw and rs1 (put into 33-bit value to handle clipping)
+				sum_1st_w_33 := resize(SIGNED(rs1(31 downto 0)), 33) + resize(product_1st_hw, 33);	
+				sum_2nd_w_33 := resize(SIGNED(rs1(63 downto 32)), 33) + resize(product_2nd_hw, 33);
+				sum_3rd_w_33 := resize(SIGNED(rs1(95 downto 64)), 33) + resize(product_3rd_hw, 33);
+				sum_4th_w_33 := resize(SIGNED(rs1(127 downto 96)), 33) + resize(product_4th_hw, 33);
+				
+				-- Determine clipping 
+				
+				-- First sum
+				if (sum_1st_w_33 > SIGNED_32_MAX) then
+					sum_1st_w := SIGNED_32_MAX;
+				elsif (sum_1st_w_33 < SIGNED_32_MIN) then
+					sum_1st_w := SIGNED_32_MIN;
+				else
+					sum_1st_w := sum_1st_w_33(31 downto 0);
+				end if;	   
+				
+				-- Second sum
+				if (sum_2nd_w_33 > SIGNED_32_MAX) then
+					sum_2nd_w := SIGNED_32_MAX;
+				elsif (sum_2nd_w_33 < SIGNED_32_MIN) then
+					sum_2nd_w := SIGNED_32_MIN;
+				else
+					sum_2nd_w := sum_2nd_w_33(31 downto 0);
+				end if;
+				
+				-- Third sum
+				if (sum_3rd_w_33 > SIGNED_32_MAX) then
+					sum_3rd_w := SIGNED_32_MAX;
+				elsif (sum_3rd_w_33 < SIGNED_32_MIN) then
+					sum_3rd_w := SIGNED_32_MIN;
+				else
+					sum_3rd_w := sum_3rd_w_33(31 downto 0);
+				end if;
+				
+				-- Fourth sum
+				if (sum_4th_w_33 > SIGNED_32_MAX) then
+					sum_4th_w := SIGNED_32_MAX;
+				elsif (sum_4th_w_33 < SIGNED_32_MIN) then
+					sum_4th_w := SIGNED_32_MIN;
+				else
+					sum_4th_w := sum_4th_w_33(31 downto 0);
+				end if;	   
+				
+				-- Write to rd
+				rd(31 downto 0) <= STD_LOGIC_VECTOR(sum_1st_w);	
+				rd(63 downto 32) <= STD_LOGIC_VECTOR(sum_2nd_w);
+				rd(95 downto 64) <= STD_LOGIC_VECTOR(sum_3rd_w);
+				rd(127 downto 96) <= STD_LOGIC_VECTOR(sum_4th_w);  
+				
+			-------------------------------------------------------------------
             when "00010" => -- Signed Integer Multiply-Add High with Saturation
+			-------------------------------------------------------------------
+			
+			-- Multiply all corresponding high 16-bit values of 32-bit fields in rs2 and rs3
+				product_1st_hw := SIGNED(rs2(31 downto 16)) * SIGNED(rs3(31 downto 16));
+				product_2nd_hw := SIGNED(rs2(63 downto 48)) * SIGNED(rs3(63 downto 48));
+				product_3rd_hw := SIGNED(rs2(95 downto 80)) * SIGNED(rs3(95 downto 80));
+				product_4th_hw := SIGNED(rs2(127 downto 112)) * SIGNED(rs3(127 downto 112));
+				
+				-- Add corresponding 32-bit values with product_x_hw and rs1 (put into 33-bit value to handle clipping)
+				sum_1st_w_33 := resize(SIGNED(rs1(31 downto 0)), 33) + resize(product_1st_hw, 33);	
+				sum_2nd_w_33 := resize(SIGNED(rs1(63 downto 32)), 33) + resize(product_2nd_hw, 33);
+				sum_3rd_w_33 := resize(SIGNED(rs1(95 downto 64)), 33) + resize(product_3rd_hw, 33);
+				sum_4th_w_33 := resize(SIGNED(rs1(127 downto 96)), 33) + resize(product_4th_hw, 33);
+				
+				-- Determine clipping 
+				
+				-- First sum
+				if (sum_1st_w_33 > SIGNED_32_MAX) then
+					sum_1st_w := SIGNED_32_MAX;
+				elsif (sum_1st_w_33 < SIGNED_32_MIN) then
+					sum_1st_w := SIGNED_32_MIN;
+				else
+					sum_1st_w := sum_1st_w_33(31 downto 0);
+				end if;	   
+				
+				-- Second sum
+				if (sum_2nd_w_33 > SIGNED_32_MAX) then
+					sum_2nd_w := SIGNED_32_MAX;
+				elsif (sum_2nd_w_33 < SIGNED_32_MIN) then
+					sum_2nd_w := SIGNED_32_MIN;
+				else
+					sum_2nd_w := sum_2nd_w_33(31 downto 0);
+				end if;
+				
+				-- Third sum
+				if (sum_3rd_w_33 > SIGNED_32_MAX) then
+					sum_3rd_w := SIGNED_32_MAX;
+				elsif (sum_3rd_w_33 < SIGNED_32_MIN) then
+					sum_3rd_w := SIGNED_32_MIN;
+				else
+					sum_3rd_w := sum_3rd_w_33(31 downto 0);
+				end if;
+				
+				-- Fourth sum
+				if (sum_4th_w_33 > SIGNED_32_MAX) then
+					sum_4th_w := SIGNED_32_MAX;
+				elsif (sum_4th_w_33 < SIGNED_32_MIN) then
+					sum_4th_w := SIGNED_32_MIN;
+				else
+					sum_4th_w := sum_4th_w_33(31 downto 0);
+				end if;	   
+				
+				-- Write to rd
+				rd(31 downto 0) <= STD_LOGIC_VECTOR(sum_1st_w);	
+				rd(63 downto 32) <= STD_LOGIC_VECTOR(sum_2nd_w);
+				rd(95 downto 64) <= STD_LOGIC_VECTOR(sum_3rd_w);
+				rd(127 downto 96) <= STD_LOGIC_VECTOR(sum_4th_w);
+				
+			-----------------------------------------------------------------------
             when "00011" => -- Signed Integer Multiply-Subtract Low with Saturation
+			-----------------------------------------------------------------------
+			
+			
+			
+			------------------------------------------------------------------------
             when "00100" => -- Signed Integer Multiply-Subtract High with Saturation
+			------------------------------------------------------------------------
+			
             
+			------------------------------------------------------------------------
             when "00101" =>  -- Signed Long Integer Multiply-Add Low with Saturation
+			------------------------------------------------------------------------
+			
                 product_low  := SIGNED(rs2(31 downto 0)) * SIGNED(rs3(31 downto 0)); --computing and storing lower product(Lower 32 Bits)
                 product_high := SIGNED(rs2(95 downto 64)) * SIGNED(rs3(95 downto 64)); --computing and storing the high product
 
@@ -132,8 +304,11 @@ begin
                 --Transferring sum_high and sum_low into register rd
                 rd(127 downto 64) <= STD_LOGIC_VECTOR(sum_high); --Assigning sum_high to top half of rd
                 rd(63 downto 0)   <= STD_LOGIC_VECTOR(sum_low);  --Assigning sum_low to top bottom half of rd
-
+			
+			-------------------------------------------------------------------------
             when "00110" =>  -- Signed Long Integer Multiply-Add High with Saturation
+			-------------------------------------------------------------------------
+			
                 product_low  := SIGNED(rs2(63 downto 32)) * SIGNED(rs3(63 downto 32)); --computing and storing lower product( Higher 32 Bits)
                 product_high := SIGNED(rs2(127 downto 96)) * SIGNED(rs3(127 downto 96)); --computing and storing the high product
 
@@ -166,8 +341,11 @@ begin
                 --Transferring sum_high and sum_low into register rd
                 rd(127 downto 64) <= STD_LOGIC_VECTOR(sum_high); --Assigning sum_high to top half of rd
                 rd(63 downto 0)   <= STD_LOGIC_VECTOR(sum_low);  --Assigning sum_low to top bottom half of rd
-
+			
+			-----------------------------------------------------------------------------
             when "00111" =>  -- Signed Long Integer Multiply-Subtract Low with Saturation
+			-----------------------------------------------------------------------------
+			
                 product_low  := SIGNED(rs2(31 downto 0)) * SIGNED(rs3(31 downto 0)); --computing and storing lower product(Lower 32 Bits)
                 product_high := SIGNED(rs2(95 downto 64)) * SIGNED(rs3(95 downto 64)); --computing and storing the high product
 
@@ -200,8 +378,11 @@ begin
                 --Transferring diff_high and diff_low into register rd
                 rd(127 downto 64) <= STD_LOGIC_VECTOR(diff_high); --Assigning sum_high to top half of rd
                 rd(63 downto 0)   <= STD_LOGIC_VECTOR(diff_low);  --Assigning sum_low to top bottom half of rd
-
+			
+			------------------------------------------------------------------------------
             when "01000" =>  -- Signed Long Integer Multiply-Subtract High with Saturation
+			------------------------------------------------------------------------------
+			
                 product_low  := SIGNED(rs2(63 downto 32)) * SIGNED(rs3(63 downto 32)); --computing and storing lower product(Higher 32 Bits)
                 product_high := SIGNED(rs2(127 downto 96)) * SIGNED(rs3(127 downto 96)); --computing and storing the high product
 
@@ -234,16 +415,56 @@ begin
                 --Transferring diff_high and diff_low into register rd
                 rd(127 downto 64) <= STD_LOGIC_VECTOR(diff_high); --Assigning sum_high to top half of rd
                 rd(63 downto 0)   <= STD_LOGIC_VECTOR(diff_low);  --Assigning sum_low to top bottom half of rd
-
-            -- R3-Instruction Format
+				
+			------------------------	
+            -- R3-Instruction Format 
+			------------------------
+			
+			-----------------------
             when "01001" =>  -- NOP
+			-----------------------
+			
+			
+			
+			-------------------------
             when "01010" =>  -- SHRHI
+			-------------------------
+			
+			
+			
+			----------------------
             when "01011" =>  -- AU
+			----------------------
+			
+			
+			
+			-------------------------
             when "01100" =>  -- CNT1H
+			-------------------------
+			
+			
+			
+			-----------------------
             when "01101" =>  -- AHS
+			-----------------------
+			
+			
+			
+			----------------------
             when "01110" =>  -- OR
+			----------------------
+			
+		
+			
+			-----------------------
             when "01111" =>  -- BCW
+			-----------------------
+			
+			
+			
+			-------------------------
             when "10000" =>  -- MAXWS
+			-------------------------
 			
 			--Working on Slice 4
 				if(SIGNED(rs1(127 downto 96)) > SIGNED(rs2(127 downto 96)))then
@@ -272,8 +493,10 @@ begin
 				else
 					rd(31 downto 0) <= rs2(31 downto 0); 
 				end if; 
-					
+			
+			-------------------------
             when "10001" =>  -- MINWS
+			-------------------------
 			
 				--Working on Slice 4
 				if(SIGNED(rs1(127 downto 96)) < SIGNED(rs2(127 downto 96)))then
@@ -302,9 +525,10 @@ begin
 				else
 					rd(31 downto 0) <= rs2(31 downto 0); 
 				end if; 
-					
-            when "10010" =>  -- MLHU
 			
+			------------------------
+            when "10010" =>  -- MLHU
+			------------------------
 				--Starting With most significant low 16 bits -> Slice 4
 			    product := UNSIGNED(rs1(111 downto 96)) * UNSIGNED(rs2(111 downto 96)); --Storing the product into the variable	
 				rd(127 downto 96) <= STD_LOGIC_VECTOR(product); --copying the 32 bit product to slice 4 of rd
@@ -320,8 +544,10 @@ begin
 				--Next 16 bits -> Slice 1
 				product := UNSIGNED(rs1(15 downto 0)) * UNSIGNED(rs2(15 downto 0));
 				rd(31 downto 0) <= STD_LOGIC_VECTOR(product);	 --Copying product to slice 1 of rd
-				
+			
+			-------------------------
             when "10011" =>  -- MLHCU
+			-------------------------
 			
 				five_const := UNSIGNED(rs2(4 downto 0)); --Extracting the 5 LSBs from rs2
 			
@@ -339,18 +565,101 @@ begin
 				
 				--Next 16 bits -> Slice 1
 				product := resize(UNSIGNED(rs1(15 downto 0)) * five_const,32);	
-				
-            when "10100" =>  -- AND
+			
+			-----------------------
+            when "10100" =>  -- AND	
+			-----------------------
 			
 				rd <= rs1 AND rs2; --BITWISE AND
 			
+			------------------------
             when "10101" =>  -- CLZW
+			------------------------ 
+			
+				--Starting with top word: word 4
+				count := 0; --resetting counter before next iteration
+				word := UNSIGNED(rs1(127 downto 96)); --Extracting word from rs1
+				if(word = to_unsigned(0,32)) then
+					rd(127 downto 96) <= STD_LOGIC_VECTOR(to_unsigned(32,32)); --Converting 32 from int to binary with a width of 32 and trasnferring to rd
+				else
+					for i in 31 downto 0 loop
+						if(word(i) = '1') then
+							exit;
+						else
+							count := count + 1;	  --Incrementing count
+						end if;
+					end loop;
+					rd(127 downto 96) <= STD_LOGIC_VECTOR(to_unsigned(count,32)); --converting count to 32 bit value and storing into slice 4 of rd
+				end if;
+				
+				--Operating word 3
+				count := 0; --resetting counter before next iteration
+				word := UNSIGNED(rs1(95 downto 64)); --Extracting word from rs1
+				if(word = to_unsigned(0,32)) then
+					rd(95 downto 64) <= STD_LOGIC_VECTOR(to_unsigned(32,32)); 
+				else
+					for i in 31 downto 0 loop
+						if(word(i) = '1') then
+							exit;
+						else
+							count := count + 1;	  --Incrementing count
+						end if;
+					end loop;
+					rd(95 downto 64) <= STD_LOGIC_VECTOR(to_unsigned(count,32)); --Storing into slice 3 of rd
+				end if;
+				
+				--Operating word 2
+				count := 0; --resetting counter before next iteration
+				word := UNSIGNED(rs1(63 downto 32)); --Extracting word from rs1
+				if(word = to_unsigned(0,32)) then
+					rd(63 downto 32) <= STD_LOGIC_VECTOR(to_unsigned(32,32)); 
+				else
+					for i in 31 downto 0 loop
+						if(word(i) = '1') then
+							exit;
+						else
+							count := count + 1;	 --Incrementing count
+						end if;
+					end loop;
+					rd(63 downto 32) <= STD_LOGIC_VECTOR(to_unsigned(count,32)); --Storing into slice 2 of rd
+				end if;	
+				
+				--Operating word 1
+				count := 0; --resetting counter before next iteration
+				word := UNSIGNED(rs1(31 downto 0)); --Extracting word from rs1
+				if(word = to_unsigned(0,32)) then
+					rd(31 downto 0) <= STD_LOGIC_VECTOR(to_unsigned(32,32)); 
+				else
+					for i in 31 downto 0 loop
+						if(word(i) = '1') then
+							exit;
+						else
+							count := count + 1;	 --Incrementing count
+						end if;
+					end loop;
+					rd(31 downto 0) <= STD_LOGIC_VECTOR(to_unsigned(count,32)); --Storing into slice 1 of rd
+				end if;
+				
+			------------------------
             when "10110" =>  -- ROTW
+			------------------------
+			
+			
+			
+			------------------------
             when "10111" =>  -- SFWU
+			------------------------
+			
+			
+			
+			------------------------
             when "11000" =>  -- SFHS
+			------------------------
 
-            -- Invalid
-            when others => rd <= (others => 'X');
+            --------------------------------------------------
+            when others => rd <= (others => 'X');	-- Invalid
+			--------------------------------------------------
+			
         end case;
     end process;
 end behavioral;
