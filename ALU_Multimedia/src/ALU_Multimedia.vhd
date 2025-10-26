@@ -75,7 +75,8 @@ begin
         variable diff_high_65 : SIGNED(64 downto 0);
 		
 		--Variables to hold the 4 products for MLHU and MLHCU
-		variable product : UNSIGNED(31 downto 0); --Stores the 32 bit product
+		variable product : UNSIGNED(31 downto 0); --Stores the 32 bit product 
+		variable five_const : UNSIGNED(4 downto 0); --5 bit constant from rs2
 		
     begin
         case instr is
@@ -303,6 +304,7 @@ begin
 				end if; 
 					
             when "10010" =>  -- MLHU
+			
 				--Starting With most significant low 16 bits -> Slice 4
 			    product := UNSIGNED(rs1(111 downto 96)) * UNSIGNED(rs2(111 downto 96)); --Storing the product into the variable	
 				rd(127 downto 96) <= STD_LOGIC_VECTOR(product); --copying the 32 bit product to slice 4 of rd
@@ -320,6 +322,24 @@ begin
 				rd(31 downto 0) <= STD_LOGIC_VECTOR(product);	 --Copying product to slice 1 of rd
 				
             when "10011" =>  -- MLHCU
+			
+				five_const := UNSIGNED(rs2(4 downto 0)); --Extracting the 5 LSBs from rs2
+			
+				--Starting With most significant low 16 bits -> Slice 4
+			    product := resize(UNSIGNED(rs1(111 downto 96)) * five_const,32); --Performing multiplication and resizing to 32 bits
+				rd(127 downto 96) <= STD_LOGIC_VECTOR(product); --copying the 32 bit product to slice 4 of rd
+				
+				--Next 16 bits -> Slice 3  
+				product := resize(UNSIGNED(rs1(79 downto 64)) * five_const,32);
+				rd(95 downto 64) <= STD_LOGIC_VECTOR(product);	 --Copying product to slice 3 of rd
+				
+				--Next 16 bits -> Slice 2
+				product := resize(UNSIGNED(rs1(47 downto 32)) * five_const,32);
+				rd(63 downto 32) <= STD_LOGIC_VECTOR(product);	 --Copying product to slice 2 of rd
+				
+				--Next 16 bits -> Slice 1
+				product := resize(UNSIGNED(rs1(15 downto 0)) * five_const,32);	
+				
             when "10100" =>  -- AND
 			
 				rd <= rs1 AND rs2; --BITWISE AND
