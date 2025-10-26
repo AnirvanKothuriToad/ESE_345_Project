@@ -161,36 +161,36 @@ begin
 				-- Determine clipping 
 				
 				-- First sum
-				if (sum_1st_w_33 > SIGNED_32_MAX) then
+				if (sum_1st_w_33 > resize(SIGNED_32_MAX, 33)) then
 					sum_1st_w := SIGNED_32_MAX;
-				elsif (sum_1st_w_33 < SIGNED_32_MIN) then
+				elsif (sum_1st_w_33 < resize(SIGNED_32_MIN, 33)) then
 					sum_1st_w := SIGNED_32_MIN;
 				else
 					sum_1st_w := sum_1st_w_33(31 downto 0);
 				end if;	   
 				
 				-- Second sum
-				if (sum_2nd_w_33 > SIGNED_32_MAX) then
+				if (sum_2nd_w_33 > resize(SIGNED_32_MAX, 33)) then
 					sum_2nd_w := SIGNED_32_MAX;
-				elsif (sum_2nd_w_33 < SIGNED_32_MIN) then
+				elsif (sum_2nd_w_33 < resize(SIGNED_32_MIN, 33)) then
 					sum_2nd_w := SIGNED_32_MIN;
 				else
 					sum_2nd_w := sum_2nd_w_33(31 downto 0);
 				end if;
 				
 				-- Third sum
-				if (sum_3rd_w_33 > SIGNED_32_MAX) then
+				if (sum_3rd_w_33 > resize(SIGNED_32_MAX, 33)) then
 					sum_3rd_w := SIGNED_32_MAX;
-				elsif (sum_3rd_w_33 < SIGNED_32_MIN) then
+				elsif (sum_3rd_w_33 < resize(SIGNED_32_MIN, 33)) then
 					sum_3rd_w := SIGNED_32_MIN;
 				else
 					sum_3rd_w := sum_3rd_w_33(31 downto 0);
 				end if;
 				
 				-- Fourth sum
-				if (sum_4th_w_33 > SIGNED_32_MAX) then
+				if (sum_4th_w_33 > resize(SIGNED_32_MAX, 33)) then
 					sum_4th_w := SIGNED_32_MAX;
-				elsif (sum_4th_w_33 < SIGNED_32_MIN) then
+				elsif (sum_4th_w_33 < resize(SIGNED_32_MIN, 33)) then
 					sum_4th_w := SIGNED_32_MIN;
 				else
 					sum_4th_w := sum_4th_w_33(31 downto 0);
@@ -221,36 +221,36 @@ begin
 				-- Determine clipping 
 				
 				-- First sum
-				if (sum_1st_w_33 > SIGNED_32_MAX) then
+				if (sum_1st_w_33 > resize(SIGNED_32_MAX, 33)) then
 					sum_1st_w := SIGNED_32_MAX;
-				elsif (sum_1st_w_33 < SIGNED_32_MIN) then
+				elsif (sum_1st_w_33 < resize(SIGNED_32_MIN, 33)) then
 					sum_1st_w := SIGNED_32_MIN;
 				else
 					sum_1st_w := sum_1st_w_33(31 downto 0);
 				end if;	   
 				
 				-- Second sum
-				if (sum_2nd_w_33 > SIGNED_32_MAX) then
+				if (sum_2nd_w_33 > resize(SIGNED_32_MAX, 33)) then
 					sum_2nd_w := SIGNED_32_MAX;
-				elsif (sum_2nd_w_33 < SIGNED_32_MIN) then
+				elsif (sum_2nd_w_33 < resize(SIGNED_32_MIN, 33)) then
 					sum_2nd_w := SIGNED_32_MIN;
 				else
 					sum_2nd_w := sum_2nd_w_33(31 downto 0);
 				end if;
 				
 				-- Third sum
-				if (sum_3rd_w_33 > SIGNED_32_MAX) then
+				if (sum_3rd_w_33 > resize(SIGNED_32_MAX, 33)) then
 					sum_3rd_w := SIGNED_32_MAX;
-				elsif (sum_3rd_w_33 < SIGNED_32_MIN) then
+				elsif (sum_3rd_w_33 < resize(SIGNED_32_MIN, 33)) then
 					sum_3rd_w := SIGNED_32_MIN;
 				else
 					sum_3rd_w := sum_3rd_w_33(31 downto 0);
 				end if;
 				
 				-- Fourth sum
-				if (sum_4th_w_33 > SIGNED_32_MAX) then
+				if (sum_4th_w_33 > resize(SIGNED_32_MAX, 33)) then
 					sum_4th_w := SIGNED_32_MAX;
-				elsif (sum_4th_w_33 < SIGNED_32_MIN) then
+				elsif (sum_4th_w_33 < resize(SIGNED_32_MIN, 33)) then
 					sum_4th_w := SIGNED_32_MIN;
 				else
 					sum_4th_w := sum_4th_w_33(31 downto 0);
@@ -686,9 +686,9 @@ begin
 			 	diff_17 := resize(SIGNED(rs2(127 downto 112)), 17) - resize(SIGNED(rs1(127 downto 112)), 17);
 				
 					--Saturation Logic
-				if(diff_17 > SIGNED_16_MAX) then
+				if(diff_17 > resize(SIGNED_16_MAX, 17)) then
 					rd(127 downto 112) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
-				elsif(diff_17 < SIGNED_16_MIN) then
+				elsif(diff_17 < resize(SIGNED_16_MIN, 17)) then
 					rd(127 downto 112) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
 				else
 					rd(127 downto 112) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
@@ -698,9 +698,9 @@ begin
 			 	diff_17 := resize(SIGNED(rs2(111 downto 96)), 17) - resize(SIGNED(rs1(111 downto 96)), 17);
 				
 					--Saturation Logic
-				if(diff_17 > SIGNED_16_MAX) then
+				if(diff_17 > resize(SIGNED_16_MAX, 17)) then
 					rd(111 downto 96) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
-				elsif(diff_17 < SIGNED_16_MIN) then
+				elsif(diff_17 < resize(SIGNED_16_MIN, 17)) then
 					rd(111 downto 96) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
 				else
 					rd(111 downto 96) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
@@ -710,9 +710,9 @@ begin
 			 	diff_17 := resize(SIGNED(rs2(95 downto 80)), 17) - resize(SIGNED(rs1(95 downto 80)), 17);
 				
 					--Saturation Logic
-				if(diff_17 > SIGNED_16_MAX) then
+				if(diff_17 > resize(SIGNED_16_MAX, 17)) then
 					rd(95 downto 80) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
-				elsif(diff_17 < SIGNED_16_MIN) then
+				elsif(diff_17 < resize(SIGNED_16_MIN, 17)) then
 					rd(95 downto 80) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
 				else
 					rd(95 downto 80) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
@@ -722,9 +722,9 @@ begin
 			 	diff_17 := resize(SIGNED(rs2(79 downto 64)), 17) - resize(SIGNED(rs1(79 downto 64)), 17);
 				
 					--Saturation Logic
-				if(diff_17 > SIGNED_16_MAX) then
+				if(diff_17 > resize(SIGNED_16_MAX, 17)) then
 					rd(79 downto 64) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
-				elsif(diff_17 < SIGNED_16_MIN) then
+				elsif(diff_17 < resize(SIGNED_16_MIN, 17)) then
 					rd(79 downto 64) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
 				else
 					rd(79 downto 64) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
@@ -734,9 +734,9 @@ begin
 			 	diff_17 := resize(SIGNED(rs2(63 downto 48)), 17) - resize(SIGNED(rs1(63 downto 48)), 17);
 				
 					--Saturation Logic
-				if(diff_17 > SIGNED_16_MAX) then
+				if(diff_17 > resize(SIGNED_16_MAX, 17)) then
 					rd(63 downto 48) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
-				elsif(diff_17 < SIGNED_16_MIN) then
+				elsif(diff_17 < resize(SIGNED_16_MIN, 17)) then
 					rd(63 downto 48) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
 				else
 					rd(63 downto 48) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
@@ -746,9 +746,9 @@ begin
 			 	diff_17 := resize(SIGNED(rs2(47 downto 32)), 17) - resize(SIGNED(rs1(47 downto 32)), 17);
 				
 					--Saturation Logic
-				if(diff_17 > SIGNED_16_MAX) then
+				if(diff_17 > resize(SIGNED_16_MAX, 17)) then
 					rd(47 downto 32) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
-				elsif(diff_17 < SIGNED_16_MIN) then
+				elsif(diff_17 < resize(SIGNED_16_MIN, 17)) then
 					rd(47 downto 32) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
 				else
 					rd(47 downto 32) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
@@ -758,9 +758,9 @@ begin
 			 	diff_17 := resize(SIGNED(rs2(31 downto 16)), 17) - resize(SIGNED(rs1(31 downto 16)), 17);
 				
 					--Saturation Logic
-				if(diff_17 > SIGNED_16_MAX) then
+				if(diff_17 > resize(SIGNED_16_MAX, 17)) then
 					rd(31 downto 16) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
-				elsif(diff_17 < SIGNED_16_MIN) then
+				elsif(diff_17 < resize(SIGNED_16_MIN, 17)) then
 					rd(31 downto 16) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
 				else
 					rd(31 downto 16) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
@@ -770,9 +770,9 @@ begin
 			 	diff_17 := resize(SIGNED(rs2(15 downto 0)), 17) - resize(SIGNED(rs1(15 downto 0)), 17);
 				
 					--Saturation Logic
-				if(diff_17 > SIGNED_16_MAX) then
+				if(diff_17 > resize(SIGNED_16_MAX, 17)) then
 					rd(15 downto 0) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
-				elsif(diff_17 < SIGNED_16_MIN) then
+				elsif(diff_17 < resize(SIGNED_16_MIN, 17)) then
 					rd(15 downto 0) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
 				else
 					rd(15 downto 0) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
