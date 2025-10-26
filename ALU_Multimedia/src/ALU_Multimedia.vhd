@@ -322,7 +322,7 @@ begin
             when "10011" =>  -- MLHCU
             when "10100" =>  -- AND
 			
-				rd <= rs1 AND rs2l; --BITWISE AND
+				rd <= rs1 AND rs2; --BITWISE AND
 			
             when "10101" =>  -- CLZW
             when "10110" =>  -- ROTW
