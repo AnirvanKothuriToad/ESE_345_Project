@@ -685,7 +685,7 @@ begin
 				--Working on halfword 8
 			 	diff_17 := resize(SIGNED(rs2(127 downto 112)), 17) - resize(SIGNED(rs1(127 downto 112)), 17);
 				
-				--Saturation Logic
+					--Saturation Logic
 				if(diff_17 > SIGNED_16_MAX) then
 					rd(127 downto 112) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
 				elsif(diff_17 < SIGNED_16_MIN) then
@@ -697,7 +697,7 @@ begin
 				--Working on halfword 7
 			 	diff_17 := resize(SIGNED(rs2(111 downto 96)), 17) - resize(SIGNED(rs1(111 downto 96)), 17);
 				
-				--Saturation Logic
+					--Saturation Logic
 				if(diff_17 > SIGNED_16_MAX) then
 					rd(111 downto 96) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
 				elsif(diff_17 < SIGNED_16_MIN) then
@@ -706,10 +706,10 @@ begin
 					rd(111 downto 96) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
 				end if;
 					
-					--Working on halfword 6
+				--Working on halfword 6
 			 	diff_17 := resize(SIGNED(rs2(95 downto 80)), 17) - resize(SIGNED(rs1(95 downto 80)), 17);
 				
-				--Saturation Logic
+					--Saturation Logic
 				if(diff_17 > SIGNED_16_MAX) then
 					rd(95 downto 80) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
 				elsif(diff_17 < SIGNED_16_MIN) then
@@ -721,7 +721,7 @@ begin
 					--Working on halfword 5
 			 	diff_17 := resize(SIGNED(rs2(79 downto 64)), 17) - resize(SIGNED(rs1(79 downto 64)), 17);
 				
-				--Saturation Logic
+					--Saturation Logic
 				if(diff_17 > SIGNED_16_MAX) then
 					rd(79 downto 64) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
 				elsif(diff_17 < SIGNED_16_MIN) then
@@ -730,10 +730,10 @@ begin
 					rd(79 downto 64) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
 				end if;
 					
-					--Working on halfword 4
+				--Working on halfword 4
 			 	diff_17 := resize(SIGNED(rs2(63 downto 48)), 17) - resize(SIGNED(rs1(63 downto 48)), 17);
 				
-				--Saturation Logic
+					--Saturation Logic
 				if(diff_17 > SIGNED_16_MAX) then
 					rd(63 downto 48) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
 				elsif(diff_17 < SIGNED_16_MIN) then
@@ -742,10 +742,10 @@ begin
 					rd(63 downto 48) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
 				end if;
 					
-					--Working on halfword 3
+				--Working on halfword 3
 			 	diff_17 := resize(SIGNED(rs2(47 downto 32)), 17) - resize(SIGNED(rs1(47 downto 32)), 17);
 				
-				--Saturation Logic
+					--Saturation Logic
 				if(diff_17 > SIGNED_16_MAX) then
 					rd(47 downto 32) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
 				elsif(diff_17 < SIGNED_16_MIN) then
@@ -754,10 +754,10 @@ begin
 					rd(47 downto 32) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
 				end if;
 					
-					--Working on halfword 2
+				--Working on halfword 2
 			 	diff_17 := resize(SIGNED(rs2(31 downto 16)), 17) - resize(SIGNED(rs1(31 downto 16)), 17);
 				
-				--Saturation Logic
+					--Saturation Logic
 				if(diff_17 > SIGNED_16_MAX) then
 					rd(31 downto 16) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
 				elsif(diff_17 < SIGNED_16_MIN) then
@@ -766,10 +766,10 @@ begin
 					rd(31 downto 16) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
 				end if;
 					
-					--Working on halfword 1
+				--Working on halfword 1
 			 	diff_17 := resize(SIGNED(rs2(15 downto 0)), 17) - resize(SIGNED(rs1(15 downto 0)), 17);
 				
-				--Saturation Logic
+					--Saturation Logic
 				if(diff_17 > SIGNED_16_MAX) then
 					rd(15 downto 0) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
 				elsif(diff_17 < SIGNED_16_MIN) then
