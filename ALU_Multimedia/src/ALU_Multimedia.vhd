@@ -49,7 +49,9 @@ architecture behavioral of ALU is
     constant SIGNED_64_MIN : SIGNED(63 downto 0) := (63 => '1', others => '0');
 begin
 
-    process(instr, rs3, rs2, rs1, ld_in, imm) is
+    process(instr, rs3, rs2, rs1, ld_in, imm) is 
+	
+	--Variables for Signed Multiplty Add High, Low
         --variable to store product of low 32 bits
         variable product_low  : SIGNED(63 downto 0);
         --variable to store product of high 32 bits
@@ -59,18 +61,21 @@ begin
         variable sum_low      : SIGNED(63 downto 0);
         variable sum_high     : SIGNED(63 downto 0);
 
-        --Variables to store 64 bit difference values
-        variable diff_low     : SIGNED(63 downto 0);
-        variable diff_high    : SIGNED(63 downto 0);
-
         --Variables to store 65 bit sum values to perform clipping
         variable sum_low_65   : SIGNED(64 downto 0);
         variable sum_high_65  : SIGNED(64 downto 0);
-
+		
+	--Variables for Signed Muliplty subtract High, Low
+		  --Variables to store 64 bit difference values
+        variable diff_low     : SIGNED(63 downto 0);
+        variable diff_high    : SIGNED(63 downto 0); 
+		
         --Variables to store 65 bit difference values to perform clipping
         variable diff_low_65  : SIGNED(64 downto 0);
         variable diff_high_65 : SIGNED(64 downto 0);
 		
+		--Variables to hold the 4 products for MLHU and MLHCU
+		variable product : UNSIGNED(31 downto 0); --Stores the 32 bit product
 		
     begin
         case instr is
@@ -250,21 +255,21 @@ begin
 				if(SIGNED(rs1(95 downto 64)) > SIGNED(rs2(95 downto 64)))then
 					rd(95 downto 64) <= rs1(95 downto 64); --Copying greater 32 bits into slice 3 of rd
 				else
-					rd(95 downto 64) <= rs2(95 downto 64); --Copying rs2 slice because it is bigger
+					rd(95 downto 64) <= rs2(95 downto 64); 
 				end if; 
 				
 				--Working on Slice 2	
 				if(SIGNED(rs1(63 downto 32)) > SIGNED(rs2(63 downto 32)))then
 					rd(63 downto 32) <= rs1(63 downto 32); --Copying greater 32 bits into slice 2 of rd
 				else
-					rd(63 downto 32) <= rs2(63 downto 32); --Copying rs2 slice because it is bigger
+					rd(63 downto 32) <= rs2(63 downto 32); 
 				end if; --Operation done for slice 2
 				
 				--Working on Slice 1
 				if(SIGNED(rs1(31 downto 0)) > SIGNED(rs2(31 downto 0)))then
 					rd(31 downto 0) <= rs1(31 downto 0); --Copying greater 32 bits into slice 1 of rd
 				else
-					rd(31 downto 0) <= rs2(31 downto 0); --Copying rs2 slice because it is bigger
+					rd(31 downto 0) <= rs2(31 downto 0); 
 				end if; 
 					
             when "10001" =>  -- MINWS
@@ -280,24 +285,40 @@ begin
 				if(SIGNED(rs1(95 downto 64)) < SIGNED(rs2(95 downto 64)))then
 					rd(95 downto 64) <= rs1(95 downto 64); --Copying smaller 32 bits into slice 3 of rd
 				else
-					rd(95 downto 64) <= rs2(95 downto 64); --Copying rs2 slice because it is smaller
+					rd(95 downto 64) <= rs2(95 downto 64); 
 				end if; 
 				
 				--Working on Slice 2	
 				if(SIGNED(rs1(63 downto 32)) < SIGNED(rs2(63 downto 32)))then
 					rd(63 downto 32) <= rs1(63 downto 32); --Copying smaller 32 bits into slice 2 of rd
 				else
-					rd(63 downto 32) <= rs2(63 downto 32); --Copying rs2 slice because it is smaller
+					rd(63 downto 32) <= rs2(63 downto 32); 
 				end if; --Operation done for slice 2
 				
 				--Working on Slice 1
 				if(SIGNED(rs1(31 downto 0)) < SIGNED(rs2(31 downto 0)))then
 					rd(31 downto 0) <= rs1(31 downto 0); --Copying smaller 32 bits into slice 1 of rd
 				else
-					rd(31 downto 0) <= rs2(31 downto 0); --Copying rs2 slice because it is smaller
+					rd(31 downto 0) <= rs2(31 downto 0); 
 				end if; 
 					
             when "10010" =>  -- MLHU
+				--Starting With most significant low 16 bits -> Slice 4
+			    product := UNSIGNED(rs1(111 downto 96)) * UNSIGNED(rs2(111 downto 96)); --Storing the product into the variable	
+				rd(127 downto 96) <= STD_LOGIC_VECTOR(product); --copying the 32 bit product to slice 4 of rd
+				
+				--Next 16 bits -> Slice 3  
+				product := UNSIGNED(rs1(79 downto 64)) * UNSIGNED(rs2(79 downto 64));
+				rd(95 downto 64) <= STD_LOGIC_VECTOR(product);	 --Copying product to slice 3 of rd
+				
+				--Next 16 bits -> Slice 2
+				product := UNSIGNED(rs1(47 downto 32)) * UNSIGNED(rs2(47 downto 32));
+				rd(63 downto 32) <= STD_LOGIC_VECTOR(product);	 --Copying product to slice 2 of rd
+				
+				--Next 16 bits -> Slice 1
+				product := UNSIGNED(rs1(15 downto 0)) * UNSIGNED(rs2(15 downto 0));
+				rd(31 downto 0) <= STD_LOGIC_VECTOR(product);	 --Copying product to slice 1 of rd
+				
             when "10011" =>  -- MLHCU
             when "10100" =>  -- AND
             when "10101" =>  -- CLZW
