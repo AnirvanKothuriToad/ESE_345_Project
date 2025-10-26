@@ -44,11 +44,13 @@ end ALU;
 
 architecture behavioral of ALU is											  
 
-	 --Setting MSB as 0 and everything else as 1
+	--Setting MSB as 0 and everything else as 1
+	constant SIGNED_16_MAX : SIGNED(15 downto 0) := (15 => '0', others => '1');
 	constant SIGNED_32_MAX : SIGNED(31 downto 0) := (31 => '0', others => '1');
 	constant SIGNED_64_MAX : SIGNED(63 downto 0) := (63 => '0', others => '1');	  
 	
-	 --Setting MSB as 1 and everything else as 0 to obtain the smallest signed number 
+	--Setting MSB as 1 and everything else as 0 to obtain the smallest signed number
+	constant SIGNED_16_MIN : SIGNED(15 downto 0) := (15 => '1', others => '0');
 	constant SIGNED_32_MIN : SIGNED(31 downto 0) := (31 => '1', others => '0');
     constant SIGNED_64_MIN : SIGNED(63 downto 0) := (63 => '1', others => '0');	 
 	
@@ -117,6 +119,8 @@ begin
 		variable count: INTEGER; --Counter variable to count 0s
 		variable word: UNSIGNED(31 downto 0); --variable to store each word from rs1
 		
+		--Variables for SFHS
+		variable diff_17 : SIGNED(16 downto 0); --17 bit variable to store difference.
 		
     begin
         case instr is  
@@ -566,7 +570,7 @@ begin
 				
 				--Next 16 bits -> Slice 1
 				product := resize(UNSIGNED(rs1(15 downto 0)) * five_const,32);	
-			
+				rd(31 downto 0) <= STD_LOGIC_VECTOR(product);
 			-----------------------
             when "10100" =>  -- AND	
 			-----------------------
@@ -580,8 +584,8 @@ begin
 				--Starting with top word: word 4
 				count := 0; --resetting counter before next iteration
 				word := UNSIGNED(rs1(127 downto 96)); --Extracting word from rs1
-				if(word = to_unsigned(0,32)) then
-					rd(127 downto 96) <= STD_LOGIC_VECTOR(to_unsigned(32,32)); --Converting 32 from int to binary with a width of 32 and trasnferring to rd
+				if(word = to_UNSIGNED(0,32)) then
+					rd(127 downto 96) <= STD_LOGIC_VECTOR(to_UNSIGNED(32,32)); --Converting 32 from int to binary with a width of 32 and trasnferring to rd
 				else
 					for i in 31 downto 0 loop
 						if(word(i) = '1') then
@@ -590,14 +594,14 @@ begin
 							count := count + 1;	  --Incrementing count
 						end if;
 					end loop;
-					rd(127 downto 96) <= STD_LOGIC_VECTOR(to_unsigned(count,32)); --converting count to 32 bit value and storing into slice 4 of rd
+					rd(127 downto 96) <= STD_LOGIC_VECTOR(to_UNSIGNED(count,32)); --converting count to 32 bit value and storing into slice 4 of rd
 				end if;
 				
 				--Operating word 3
 				count := 0; --resetting counter before next iteration
 				word := UNSIGNED(rs1(95 downto 64)); --Extracting word from rs1
-				if(word = to_unsigned(0,32)) then
-					rd(95 downto 64) <= STD_LOGIC_VECTOR(to_unsigned(32,32)); 
+				if(word = to_UNSIGNED(0,32)) then
+					rd(95 downto 64) <= STD_LOGIC_VECTOR(to_UNSIGNED(32,32)); 
 				else
 					for i in 31 downto 0 loop
 						if(word(i) = '1') then
@@ -606,14 +610,14 @@ begin
 							count := count + 1;	  --Incrementing count
 						end if;
 					end loop;
-					rd(95 downto 64) <= STD_LOGIC_VECTOR(to_unsigned(count,32)); --Storing into slice 3 of rd
+					rd(95 downto 64) <= STD_LOGIC_VECTOR(to_UNSIGNED(count,32)); --Storing into slice 3 of rd
 				end if;
 				
 				--Operating word 2
 				count := 0; --resetting counter before next iteration
 				word := UNSIGNED(rs1(63 downto 32)); --Extracting word from rs1
-				if(word = to_unsigned(0,32)) then
-					rd(63 downto 32) <= STD_LOGIC_VECTOR(to_unsigned(32,32)); 
+				if(word = to_UNSIGNED(0,32)) then
+					rd(63 downto 32) <= STD_LOGIC_VECTOR(to_UNSIGNED(32,32)); 
 				else
 					for i in 31 downto 0 loop
 						if(word(i) = '1') then
@@ -622,14 +626,14 @@ begin
 							count := count + 1;	 --Incrementing count
 						end if;
 					end loop;
-					rd(63 downto 32) <= STD_LOGIC_VECTOR(to_unsigned(count,32)); --Storing into slice 2 of rd
+					rd(63 downto 32) <= STD_LOGIC_VECTOR(to_UNSIGNED(count,32)); --Storing into slice 2 of rd
 				end if;	
 				
 				--Operating word 1
 				count := 0; --resetting counter before next iteration
 				word := UNSIGNED(rs1(31 downto 0)); --Extracting word from rs1
-				if(word = to_unsigned(0,32)) then
-					rd(31 downto 0) <= STD_LOGIC_VECTOR(to_unsigned(32,32)); 
+				if(word = to_UNSIGNED(0,32)) then
+					rd(31 downto 0) <= STD_LOGIC_VECTOR(to_UNSIGNED(32,32)); 
 				else
 					for i in 31 downto 0 loop
 						if(word(i) = '1') then
@@ -638,7 +642,7 @@ begin
 							count := count + 1;	 --Incrementing count
 						end if;
 					end loop;
-					rd(31 downto 0) <= STD_LOGIC_VECTOR(to_unsigned(count,32)); --Storing into slice 1 of rd
+					rd(31 downto 0) <= STD_LOGIC_VECTOR(to_UNSIGNED(count,32)); --Storing into slice 1 of rd
 				end if;
 				
 			------------------------
@@ -646,30 +650,134 @@ begin
 			------------------------
 			
 				 --Operating Slice 4
-				 rd(127 downto 96) <=  STD_LOGIC_VECTOR(rotate_right(unsigned(rs1(127 downto 96)), to_integer(unsigned(rs2(100 downto 96))))); --rotating slice 4 of rs1 by 5 LSBs from rs2 word and storing into slice 4 of rd.
+				 rd(127 downto 96) <=  STD_LOGIC_VECTOR(rotate_right(UNSIGNED(rs1(127 downto 96)), to_integer(UNSIGNED(rs2(100 downto 96))))); --rotating slice 4 of rs1 by 5 LSBs from rs2 word and storing into slice 4 of rd.
 				 
 				 --Operating Slice 3
-				 rd(95 downto 64) <=  STD_LOGIC_VECTOR(rotate_right(unsigned(rs1(95 downto 64)), to_integer(unsigned(rs2(68 downto 64))))); --rotating slice 3 of rs1 and storing into slice 3 of rd	
+				 rd(95 downto 64) <=  STD_LOGIC_VECTOR(rotate_right(UNSIGNED(rs1(95 downto 64)), to_integer(UNSIGNED(rs2(68 downto 64))))); --rotating slice 3 of rs1 and storing into slice 3 of rd	
 				 
 				 --Operating Slice 2
-				 rd(63 downto 32) <=  STD_LOGIC_VECTOR(rotate_right(unsigned(rs1(63 downto 32)), to_integer(unsigned(rs2(36 downto 32))))); --rotating slice 2 of rs1 and storing into slice 2 of rd
+				 rd(63 downto 32) <=  STD_LOGIC_VECTOR(rotate_right(UNSIGNED(rs1(63 downto 32)), to_integer(UNSIGNED(rs2(36 downto 32))))); --rotating slice 2 of rs1 and storing into slice 2 of rd
 				 
 				 --Operating Slice 1
-				 rd(31 downto 0) <=  STD_LOGIC_VECTOR(rotate_right(unsigned(rs1(31 downto 0)), to_integer(unsigned(rs2(4 downto 0))))); --rotating slice 1 of rs1 and storing into slice 1 of rd
+				 rd(31 downto 0) <=  STD_LOGIC_VECTOR(rotate_right(UNSIGNED(rs1(31 downto 0)), to_integer(UNSIGNED(rs2(4 downto 0))))); --rotating slice 1 of rs1 and storing into slice 1 of rd
 				 
-			
-			
-			
 			------------------------
             when "10111" =>  -- SFWU
 			------------------------
 			
+				  --Operating Slice 4
+				 rd(127 downto 96) <=  STD_LOGIC_VECTOR(UNSIGNED(rs2(127 downto 96)) - UNSIGNED(rs1(127 downto 96)));  --subtracting slice 4 of rs2 by rs1 and storing into slice 4 of rd
+				 
+				 --Operating Slice 3
+				 rd(95 downto 64) <=  STD_LOGIC_VECTOR(UNSIGNED(rs2(95 downto 64)) - UNSIGNED(rs1(95 downto 64)));	  --subtracting slice 3 of rs2 by rs1 and storing into slice 3 of rd
+				 
+				 --Operating Slice 2
+				 rd(63 downto 32) <=  STD_LOGIC_VECTOR(UNSIGNED(rs2(63 downto 32)) - UNSIGNED(rs1(63 downto 32)));	  --subtracting slice 2 of rs2 by rs1 and storing into slice 2 of rd
+				 
+				 --Operating Slice 1
+				 rd(31 downto 0) <=  STD_LOGIC_VECTOR(UNSIGNED(rs2(31 downto 0)) - UNSIGNED(rs1(31 downto 0)));		  --subtracting slice 1 of rs2 by rs1 and storing into slice 1 of rd
 			
 			
 			------------------------
             when "11000" =>  -- SFHS
 			------------------------
-
+			
+				--Working on halfword 8
+			 	diff_17 := resize(SIGNED(rs2(127 downto 112)), 17) - resize(SIGNED(rs1(127 downto 112)), 17);
+				
+				--Saturation Logic
+				if(diff_17 > SIGNED_16_MAX) then
+					rd(127 downto 112) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
+				elsif(diff_17 < SIGNED_16_MIN) then
+					rd(127 downto 112) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
+				else
+					rd(127 downto 112) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
+				end if;
+				
+				--Working on halfword 7
+			 	diff_17 := resize(SIGNED(rs2(111 downto 96)), 17) - resize(SIGNED(rs1(111 downto 96)), 17);
+				
+				--Saturation Logic
+				if(diff_17 > SIGNED_16_MAX) then
+					rd(111 downto 96) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
+				elsif(diff_17 < SIGNED_16_MIN) then
+					rd(111 downto 96) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
+				else
+					rd(111 downto 96) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
+				end if;
+					
+					--Working on halfword 6
+			 	diff_17 := resize(SIGNED(rs2(95 downto 80)), 17) - resize(SIGNED(rs1(95 downto 80)), 17);
+				
+				--Saturation Logic
+				if(diff_17 > SIGNED_16_MAX) then
+					rd(95 downto 80) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
+				elsif(diff_17 < SIGNED_16_MIN) then
+					rd(95 downto 80) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
+				else
+					rd(95 downto 80) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
+				end if;
+					
+					--Working on halfword 5
+			 	diff_17 := resize(SIGNED(rs2(79 downto 64)), 17) - resize(SIGNED(rs1(79 downto 64)), 17);
+				
+				--Saturation Logic
+				if(diff_17 > SIGNED_16_MAX) then
+					rd(79 downto 64) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
+				elsif(diff_17 < SIGNED_16_MIN) then
+					rd(79 downto 64) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
+				else
+					rd(79 downto 64) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
+				end if;
+					
+					--Working on halfword 4
+			 	diff_17 := resize(SIGNED(rs2(63 downto 48)), 17) - resize(SIGNED(rs1(63 downto 48)), 17);
+				
+				--Saturation Logic
+				if(diff_17 > SIGNED_16_MAX) then
+					rd(63 downto 48) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
+				elsif(diff_17 < SIGNED_16_MIN) then
+					rd(63 downto 48) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
+				else
+					rd(63 downto 48) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
+				end if;
+					
+					--Working on halfword 3
+			 	diff_17 := resize(SIGNED(rs2(47 downto 32)), 17) - resize(SIGNED(rs1(47 downto 32)), 17);
+				
+				--Saturation Logic
+				if(diff_17 > SIGNED_16_MAX) then
+					rd(47 downto 32) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
+				elsif(diff_17 < SIGNED_16_MIN) then
+					rd(47 downto 32) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
+				else
+					rd(47 downto 32) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
+				end if;
+					
+					--Working on halfword 2
+			 	diff_17 := resize(SIGNED(rs2(31 downto 16)), 17) - resize(SIGNED(rs1(31 downto 16)), 17);
+				
+				--Saturation Logic
+				if(diff_17 > SIGNED_16_MAX) then
+					rd(31 downto 16) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
+				elsif(diff_17 < SIGNED_16_MIN) then
+					rd(31 downto 16) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
+				else
+					rd(31 downto 16) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
+				end if;
+					
+					--Working on halfword 1
+			 	diff_17 := resize(SIGNED(rs2(15 downto 0)), 17) - resize(SIGNED(rs1(15 downto 0)), 17);
+				
+				--Saturation Logic
+				if(diff_17 > SIGNED_16_MAX) then
+					rd(15 downto 0) <= STD_LOGIC_VECTOR(SIGNED_16_MAX); --Overflow detected: Clip to greatest 16 bit signed value
+				elsif(diff_17 < SIGNED_16_MIN) then
+					rd(15 downto 0) <= STD_LOGIC_VECTOR(SIGNED_16_MIN); --Underflow detected: Clip to smallest 16 bit signed value 
+				else
+					rd(15 downto 0) <=  STD_LOGIC_VECTOR(resize(diff_17, 16)); --No Clipping Required: Perform signed subtraction
+				end if;
+				
             --------------------------------------------------
             when others => rd <= (others => 'X');	-- Invalid
 			--------------------------------------------------
