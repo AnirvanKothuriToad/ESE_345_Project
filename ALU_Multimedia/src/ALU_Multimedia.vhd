@@ -117,6 +117,7 @@ begin
 		variable count: INTEGER; --Counter variable to count 0s
 		variable word: UNSIGNED(31 downto 0); --variable to store each word from rs1
 		
+		
     begin
         case instr is  
 			----------------------------------
@@ -643,6 +644,19 @@ begin
 			------------------------
             when "10110" =>  -- ROTW
 			------------------------
+			
+				 --Operating Slice 4
+				 rd(127 downto 96) <=  STD_LOGIC_VECTOR(rotate_right(unsigned(rs1(127 downto 96)), to_integer(unsigned(rs2(100 downto 96))))); --rotating slice 4 of rs1 by 5 LSBs from rs2 word and storing into slice 4 of rd.
+				 
+				 --Operating Slice 3
+				 rd(95 downto 64) <=  STD_LOGIC_VECTOR(rotate_right(unsigned(rs1(95 downto 64)), to_integer(unsigned(rs2(68 downto 64))))); --rotating slice 3 of rs1 and storing into slice 3 of rd	
+				 
+				 --Operating Slice 2
+				 rd(63 downto 32) <=  STD_LOGIC_VECTOR(rotate_right(unsigned(rs1(63 downto 32)), to_integer(unsigned(rs2(36 downto 32))))); --rotating slice 2 of rs1 and storing into slice 2 of rd
+				 
+				 --Operating Slice 1
+				 rd(31 downto 0) <=  STD_LOGIC_VECTOR(rotate_right(unsigned(rs1(31 downto 0)), to_integer(unsigned(rs2(4 downto 0))))); --rotating slice 1 of rs1 and storing into slice 1 of rd
+				 
 			
 			
 			
