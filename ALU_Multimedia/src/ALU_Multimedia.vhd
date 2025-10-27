@@ -2,13 +2,13 @@
 --
 -- Title       : ALU
 -- Design      : ProjectPartI
--- Author      : anirvan.kothuri@stonybrook.edu
+-- Author      : Anirvan Kothuri and Mahir Patel
 -- Company     : Stony Brook University
 --
 -------------------------------------------------------------------------------
 --
 -- File        : C:
--- Generated   : Sun Oct 12 15:37:45 2025
+-- Generated   : Sun Oct 10 15:37:45 2025
 -- From        : Interface description file
 -- By          : ItfToHdl ver. 1.0
 --
@@ -20,7 +20,7 @@
 
 --{{ Section below this comment is automatically maintained
 --   and may be overwritten
---{entity {ALU} architecture {structural}}
+--{entity {ALU} architecture {Behavioral}}
 
 library IEEE;
 use IEEE.std_logic_1164.all;
