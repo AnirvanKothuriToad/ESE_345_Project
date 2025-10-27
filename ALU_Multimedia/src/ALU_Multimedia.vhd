@@ -560,15 +560,15 @@ begin
 				-- Using to_integer() from numeric.std to convert last 4 bits to an integer for use in shift_right() 
 				-- Converting target half-words of rs1 to type UNSIGNED to indicate to shift_right() to zero-fill instead of sign extend
 				-- Finally, convert back to type STD_LOGIC_VECTOR to write to rd
-				rd(15 downto 0) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(15 downto 0)), to_integer(SIGNED(rs2(3 downto 0))))); 
-				rd(31 downto 16) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(31 downto 16)), to_integer(SIGNED(rs2(3 downto 0)))));
-				rd(47 downto 32) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(47 downto 32)), to_integer(SIGNED(rs2(3 downto 0)))));
-				rd(63 downto 48) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(63 downto 48)), to_integer(SIGNED(rs2(3 downto 0))))); 
+				rd(15 downto 0) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(15 downto 0)), to_integer(UNSIGNED(rs2(3 downto 0))))); 
+				rd(31 downto 16) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(31 downto 16)), to_integer(UNSIGNED(rs2(3 downto 0)))));
+				rd(47 downto 32) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(47 downto 32)), to_integer(UNSIGNED(rs2(3 downto 0)))));
+				rd(63 downto 48) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(63 downto 48)), to_integer(UNSIGNED(rs2(3 downto 0))))); 
 				
-				rd(79 downto 64) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(79 downto 64)), to_integer(SIGNED(rs2(3 downto 0)))));
-				rd(95 downto 80) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(95 downto 80)), to_integer(SIGNED(rs2(3 downto 0)))));
-				rd(111 downto 96) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(111 downto 96)), to_integer(SIGNED(rs2(3 downto 0)))));
-				rd(127 downto 112) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(127 downto 112)), to_integer(SIGNED(rs2(3 downto 0)))));
+				rd(79 downto 64) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(79 downto 64)), to_integer(UNSIGNED(rs2(3 downto 0)))));
+				rd(95 downto 80) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(95 downto 80)), to_integer(UNSIGNED(rs2(3 downto 0)))));
+				rd(111 downto 96) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(111 downto 96)), to_integer(UNSIGNED(rs2(3 downto 0)))));
+				rd(127 downto 112) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(127 downto 112)), to_integer(UNSIGNED(rs2(3 downto 0)))));
 			
 			----------------------
             when "01011" =>  -- AU
