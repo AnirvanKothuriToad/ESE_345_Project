@@ -62,26 +62,24 @@ begin
 		
 		-- 16 bit variant:	 
 		
-		-- Variables of products (16-bit [half word] values to 32-bit product)
-		variable product_1st_hw : SIGNED(31 downto 0); 
-		variable product_2nd_hw : SIGNED(31 downto 0);
-		variable product_3rd_hw : SIGNED(31 downto 0);
-		variable product_4th_hw : SIGNED(31 downto 0); 	
-		
-		-- Store 32-bit sum
-		variable sum_1st_w : SIGNED(31 downto 0);  
-		variable sum_2nd_w : SIGNED(31 downto 0);
-		variable sum_3rd_w : SIGNED(31 downto 0);
-		variable sum_4th_w : SIGNED(31 downto 0);	 
-		
-		-- 33-bit variables to handle clipping
-		variable sum_1st_w_33 : SIGNED(32 downto 0);
-		variable sum_2nd_w_33 : SIGNED(32 downto 0);
-		variable sum_3rd_w_33 : SIGNED(32 downto 0);
-		variable sum_4th_w_33 : SIGNED(32 downto 0);
-		
-		
-		
+			-- Variables of products (16-bit [half word] values to 32-bit product)
+			variable product_1st_hw : SIGNED(31 downto 0); 
+			variable product_2nd_hw : SIGNED(31 downto 0);
+			variable product_3rd_hw : SIGNED(31 downto 0);
+			variable product_4th_hw : SIGNED(31 downto 0); 	
+			
+			-- Store 32-bit sum
+			variable sum_1st_w : SIGNED(31 downto 0);  
+			variable sum_2nd_w : SIGNED(31 downto 0);
+			variable sum_3rd_w : SIGNED(31 downto 0);
+			variable sum_4th_w : SIGNED(31 downto 0);	 
+			
+			-- 33-bit variables to handle clipping
+			variable sum_1st_w_33 : SIGNED(32 downto 0);
+			variable sum_2nd_w_33 : SIGNED(32 downto 0);
+			variable sum_3rd_w_33 : SIGNED(32 downto 0);
+			variable sum_4th_w_33 : SIGNED(32 downto 0);
+	
 		
 		-- 32 bit variant:
 	        --variable to store product of low 32 bits
@@ -97,11 +95,25 @@ begin
 	        variable sum_low_65   : SIGNED(64 downto 0);
 	        variable sum_high_65  : SIGNED(64 downto 0);
 			
-		--Variables for Signed Muliplty subtract High, Low	
+	--Variables for Signed Muliplty subtract High, Low	
 			
-			-- 16-bit variant
+		-- 16-bit variant
+		
+			-- variables for 32-bit differences
+			variable diff_1st_w : SIGNED(31 downto 0);
+			variable diff_2nd_w : SIGNED(31 downto 0);
+			variable diff_3rd_w : SIGNED(31 downto 0);
+			variable diff_4th_w : SIGNED(31 downto 0);
 			
-			-- 32-bit variant:
+			-- 33-bit variables to handle clipping;
+			variable diff_1st_w_33 : SIGNED(32 downto 0);
+			variable diff_2nd_w_33 : SIGNED(32 downto 0);
+			variable diff_3rd_w_33 : SIGNED(32 downto 0);
+			variable diff_4th_w_33 : SIGNED(32 downto 0);
+			
+			
+			-- 32-bit variant: 
+			
 			  --Variables to store 64 bit difference values
 	        variable diff_low     : SIGNED(63 downto 0);
 	        variable diff_high    : SIGNED(63 downto 0); 
@@ -110,6 +122,8 @@ begin
 	        variable diff_low_65  : SIGNED(64 downto 0);
 	        variable diff_high_65 : SIGNED(64 downto 0);
 			
+		-- Variable for AHU
+		variable sum_17 : SIGNED(16 downto 0); -- 17 bit variable to store sum for saturation rounding
 			
 		--Variables to hold the 4 products for MLHU and MLHCU	
 		variable product : UNSIGNED(31 downto 0); --Stores the 32 bit product 
@@ -159,7 +173,6 @@ begin
 				sum_4th_w_33 := resize(SIGNED(rs1(127 downto 96)), 33) + resize(product_4th_hw, 33);
 				
 				-- Determine clipping 
-				
 				-- First sum
 				if (sum_1st_w_33 > resize(SIGNED_32_MAX, 33)) then
 					sum_1st_w := SIGNED_32_MAX;
@@ -206,7 +219,7 @@ begin
             when "00010" => -- Signed Integer Multiply-Add High with Saturation
 			-------------------------------------------------------------------
 			
-			-- Multiply all corresponding high 16-bit values of 32-bit fields in rs2 and rs3
+				-- Multiply all corresponding high 16-bit values of 32-bit fields in rs2 and rs3
 				product_1st_hw := SIGNED(rs2(31 downto 16)) * SIGNED(rs3(31 downto 16));
 				product_2nd_hw := SIGNED(rs2(63 downto 48)) * SIGNED(rs3(63 downto 48));
 				product_3rd_hw := SIGNED(rs2(95 downto 80)) * SIGNED(rs3(95 downto 80));
@@ -219,7 +232,6 @@ begin
 				sum_4th_w_33 := resize(SIGNED(rs1(127 downto 96)), 33) + resize(product_4th_hw, 33);
 				
 				-- Determine clipping 
-				
 				-- First sum
 				if (sum_1st_w_33 > resize(SIGNED_32_MAX, 33)) then
 					sum_1st_w := SIGNED_32_MAX;
@@ -266,13 +278,120 @@ begin
             when "00011" => -- Signed Integer Multiply-Subtract Low with Saturation
 			-----------------------------------------------------------------------
 			
-			
-			
+				-- Multiply all corresponding high 16-bit values of 32-bit fields in rs2 and rs3
+				product_1st_hw := SIGNED(rs2(15 downto 0)) * SIGNED(rs3(15 downto 0));
+				product_2nd_hw := SIGNED(rs2(47 downto 32)) * SIGNED(rs3(47 downto 32));
+				product_3rd_hw := SIGNED(rs2(79 downto 64)) * SIGNED(rs3(79 downto 64));
+				product_4th_hw := SIGNED(rs2(111 downto 96)) * SIGNED(rs3(111 downto 96));
+				
+				-- Subtract corresponding 32-bit values of product_x_hw from rs1 (put into 33-bit value to handle clipping)
+				diff_1st_w_33 := resize(SIGNED(rs1(31 downto 0)), 33) - resize(product_1st_hw, 33);	
+				diff_2nd_w_33 := resize(SIGNED(rs1(63 downto 32)), 33) - resize(product_2nd_hw, 33);
+				diff_3rd_w_33 := resize(SIGNED(rs1(95 downto 64)), 33) - resize(product_3rd_hw, 33);
+				diff_4th_w_33 := resize(SIGNED(rs1(127 downto 96)), 33) - resize(product_4th_hw, 33);
+				
+				-- Determine clipping 
+				-- First difference
+				if (diff_1st_w_33 > resize(SIGNED_32_MAX, 33)) then
+					diff_1st_w := SIGNED_32_MAX;
+				elsif (diff_1st_w_33 < resize(SIGNED_32_MIN, 33)) then
+					diff_1st_w := SIGNED_32_MIN;
+				else
+					diff_1st_w := diff_1st_w_33(31 downto 0);
+				end if;	   
+				
+				-- Second difference
+				if (diff_2nd_w_33 > resize(SIGNED_32_MAX, 33)) then
+					diff_2nd_w := SIGNED_32_MAX;
+				elsif (diff_2nd_w_33 < resize(SIGNED_32_MIN, 33)) then
+					diff_2nd_w := SIGNED_32_MIN;
+				else
+					diff_2nd_w := diff_2nd_w_33(31 downto 0);
+				end if;
+				
+				-- Third difference
+				if (diff_3rd_w_33 > resize(SIGNED_32_MAX, 33)) then
+					diff_3rd_w := SIGNED_32_MAX;
+				elsif (diff_3rd_w_33 < resize(SIGNED_32_MIN, 33)) then
+					diff_3rd_w := SIGNED_32_MIN;
+				else
+					diff_3rd_w := diff_3rd_w_33(31 downto 0);
+				end if;
+				
+				-- Fourth difference
+				if (diff_4th_w_33 > resize(SIGNED_32_MAX, 33)) then
+					diff_4th_w := SIGNED_32_MAX;
+				elsif (diff_4th_w_33 < resize(SIGNED_32_MIN, 33)) then
+					diff_4th_w := SIGNED_32_MIN;
+				else
+					diff_4th_w := diff_4th_w_33(31 downto 0);
+				end if;	  
+				
+				-- Write to rd
+				rd(31 downto 0) <= STD_LOGIC_VECTOR(diff_1st_w);	
+				rd(63 downto 32) <= STD_LOGIC_VECTOR(diff_2nd_w);
+				rd(95 downto 64) <= STD_LOGIC_VECTOR(diff_3rd_w);
+				rd(127 downto 96) <= STD_LOGIC_VECTOR(diff_4th_w);
+				
 			------------------------------------------------------------------------
             when "00100" => -- Signed Integer Multiply-Subtract High with Saturation
 			------------------------------------------------------------------------
 			
-            
+            	-- Multiply all corresponding high 16-bit values of 32-bit fields in rs2 and rs3
+				product_1st_hw := SIGNED(rs2(31 downto 16)) * SIGNED(rs3(31 downto 16));
+				product_2nd_hw := SIGNED(rs2(63 downto 48)) * SIGNED(rs3(63 downto 48));
+				product_3rd_hw := SIGNED(rs2(95 downto 80)) * SIGNED(rs3(95 downto 80));
+				product_4th_hw := SIGNED(rs2(127 downto 112)) * SIGNED(rs3(127 downto 112));
+				
+				-- Subtract corresponding 32-bit values of product_x_hw from rs1 (put into 33-bit value to handle clipping)
+				diff_1st_w_33 := resize(SIGNED(rs1(31 downto 0)), 33) - resize(product_1st_hw, 33);	
+				diff_2nd_w_33 := resize(SIGNED(rs1(63 downto 32)), 33) - resize(product_2nd_hw, 33);
+				diff_3rd_w_33 := resize(SIGNED(rs1(95 downto 64)), 33) - resize(product_3rd_hw, 33);
+				diff_4th_w_33 := resize(SIGNED(rs1(127 downto 96)), 33) - resize(product_4th_hw, 33);
+				
+				-- Determine clipping 
+				-- First difference
+				if (diff_1st_w_33 > resize(SIGNED_32_MAX, 33)) then
+					diff_1st_w := SIGNED_32_MAX;
+				elsif (diff_1st_w_33 < resize(SIGNED_32_MIN, 33)) then
+					diff_1st_w := SIGNED_32_MIN;
+				else
+					diff_1st_w := diff_1st_w_33(31 downto 0);
+				end if;	   
+				
+				-- Second difference
+				if (diff_2nd_w_33 > resize(SIGNED_32_MAX, 33)) then
+					diff_2nd_w := SIGNED_32_MAX;
+				elsif (diff_2nd_w_33 < resize(SIGNED_32_MIN, 33)) then
+					diff_2nd_w := SIGNED_32_MIN;
+				else
+					diff_2nd_w := diff_2nd_w_33(31 downto 0);
+				end if;
+				
+				-- Third difference
+				if (diff_3rd_w_33 > resize(SIGNED_32_MAX, 33)) then
+					diff_3rd_w := SIGNED_32_MAX;
+				elsif (diff_3rd_w_33 < resize(SIGNED_32_MIN, 33)) then
+					diff_3rd_w := SIGNED_32_MIN;
+				else
+					diff_3rd_w := diff_3rd_w_33(31 downto 0);
+				end if;
+				
+				-- Fourth difference
+				if (diff_4th_w_33 > resize(SIGNED_32_MAX, 33)) then
+					diff_4th_w := SIGNED_32_MAX;
+				elsif (diff_4th_w_33 < resize(SIGNED_32_MIN, 33)) then
+					diff_4th_w := SIGNED_32_MIN;
+				else
+					diff_4th_w := diff_4th_w_33(31 downto 0);
+				end if;	  
+				
+				-- Write to rd
+				rd(31 downto 0) <= STD_LOGIC_VECTOR(diff_1st_w);	
+				rd(63 downto 32) <= STD_LOGIC_VECTOR(diff_2nd_w);
+				rd(95 downto 64) <= STD_LOGIC_VECTOR(diff_3rd_w);
+				rd(127 downto 96) <= STD_LOGIC_VECTOR(diff_4th_w);
+				
 			------------------------------------------------------------------------
             when "00101" =>  -- Signed Long Integer Multiply-Add Low with Saturation
 			------------------------------------------------------------------------
@@ -429,37 +548,98 @@ begin
             when "01001" =>  -- NOP
 			-----------------------
 			
-			
+				rd <= rd;	-- Do nothing basically
 			
 			-------------------------
             when "01010" =>  -- SHRHI
 			-------------------------
 			
-			
+				-- rs1 is the target register, rs2 4 LSBs are shift amount
+				
+				-- Using shift_right() from numeric.std, takes a unsigned array to shift and an integer for shift amount
+				-- Using to_integer() from numeric.std to convert last 4 bits to an integer for use in shift_right() 
+				-- Converting target half-words of rs1 to type UNSIGNED to indicate to shift_right() to zero-fill instead of sign extend
+				-- Finally, convert back to type STD_LOGIC_VECTOR to write to rd
+				rd(15 downto 0) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(15 downto 0)), to_integer(SIGNED(rs2(3 downto 0))))); 
+				rd(31 downto 16) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(31 downto 16)), to_integer(SIGNED(rs2(3 downto 0)))));
+				rd(47 downto 32) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(47 downto 32)), to_integer(SIGNED(rs2(3 downto 0)))));
+				rd(63 downto 48) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(63 downto 48)), to_integer(SIGNED(rs2(3 downto 0))))); 
+				
+				rd(79 downto 64) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(79 downto 64)), to_integer(SIGNED(rs2(3 downto 0)))));
+				rd(95 downto 80) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(95 downto 80)), to_integer(SIGNED(rs2(3 downto 0)))));
+				rd(111 downto 96) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(111 downto 96)), to_integer(SIGNED(rs2(3 downto 0)))));
+				rd(127 downto 112) <= STD_LOGIC_VECTOR(shift_right(UNSIGNED(rs1(127 downto 112)), to_integer(SIGNED(rs2(3 downto 0)))));
 			
 			----------------------
             when "01011" =>  -- AU
 			----------------------
 			
-			
+				-- Converting values from type STD_LOGIC_VECTOR to SIGNED
+				-- Adding them
+				-- Converting result back to type STD_LOGIC_VECTOR
+				-- Write value to rd, regardless of overflow/underflow
+				rd(31 downto 0) <= STD_LOGIC_VECTOR(SIGNED(rs1(31 downto 0)) + SIGNED(rs2(31 downto 0)));	  
+				rd(63 downto 32) <= STD_LOGIC_VECTOR(SIGNED(rs1(63 downto 32)) + SIGNED(rs2(63 downto 32)));
+				rd(95 downto 64) <= STD_LOGIC_VECTOR(SIGNED(rs1(95 downto 64)) + SIGNED(rs2(95 downto 64)));
+				rd(127 downto 96) <= STD_LOGIC_VECTOR(SIGNED(rs1(127 downto 96)) + SIGNED(rs2(127 downto 96)));
 			
 			-------------------------
             when "01100" =>  -- CNT1H
 			-------------------------
 			
-			
+				-- Using variable count	
+				
+				-- Outer loop for all 8 half-word segments in rs1
+				for i in 0 to 7	loop  
+					
+					count := 0;	-- Reset counter at start of every loop
+						
+					-- Inner loop for each half-word
+					for j in (15 + (16 * i)) downto (0 + (16 * i)) loop  
+						
+						-- Increment counter for every '1'
+						if rs1(j) = '1' then
+							count := count + 1;	
+							
+						end if;	
+					end loop;
+					
+					-- Convert count to 16-bit unsigned value and then to type STD_LOGIC_VECTOR
+					-- Write to corresponding rd half-word
+					rd((15 + (16 * i)) downto (0 + (16 * i))) <= STD_LOGIC_VECTOR(to_unsigned(count, 16));
+					
+				end loop;
 			
 			-----------------------
             when "01101" =>  -- AHS
 			-----------------------
 			
-			
+				for i in 0 to 7 loop
+					
+					sum_17 := resize(SIGNED(rs1((15 + (16 * i)) downto (0 + (16 * i)))), 17) 
+							+ resize(SIGNED(rs2((15 + (16 * i)) downto (0 + (16 * i)))), 17);  
+					
+					-- Determine clipping
+					if (sum_17 > resize(SIGNED_16_MAX, 17)) then	   
+						
+						rd((15 + (16 * i)) downto (0 + (16 * i))) <= STD_LOGIC_VECTOR(SIGNED_16_MAX);
+						
+					elsif (sum_17 < resize(SIGNED_16_MIN, 17)) then	  
+						
+						rd((15 + (16 * i)) downto (0 + (16 * i))) <= STD_LOGIC_VECTOR(SIGNED_16_MIN);	
+						
+					else												
+						
+						rd((15 + (16 * i)) downto (0 + (16 * i))) <= STD_LOGIC_VECTOR(sum_17(15 downto 0));
+						
+					end if;		
+				end loop;
 			
 			----------------------
             when "01110" =>  -- OR
 			----------------------
 			
-		
+		  		rd <= rs1 OR rs2;
 			
 			-----------------------
             when "01111" =>  -- BCW
