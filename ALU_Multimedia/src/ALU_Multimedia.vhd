@@ -574,14 +574,14 @@ begin
             when "01011" =>  -- AU
 			----------------------
 			
-				-- Converting values from type STD_LOGIC_VECTOR to SIGNED
+				-- Converting values from type STD_LOGIC_VECTOR to UNSIGNED
 				-- Adding them
 				-- Converting result back to type STD_LOGIC_VECTOR
 				-- Write value to rd, regardless of overflow/underflow
-				rd(31 downto 0) <= STD_LOGIC_VECTOR(SIGNED(rs1(31 downto 0)) + SIGNED(rs2(31 downto 0)));	  
-				rd(63 downto 32) <= STD_LOGIC_VECTOR(SIGNED(rs1(63 downto 32)) + SIGNED(rs2(63 downto 32)));
-				rd(95 downto 64) <= STD_LOGIC_VECTOR(SIGNED(rs1(95 downto 64)) + SIGNED(rs2(95 downto 64)));
-				rd(127 downto 96) <= STD_LOGIC_VECTOR(SIGNED(rs1(127 downto 96)) + SIGNED(rs2(127 downto 96)));
+				rd(31 downto 0) <= STD_LOGIC_VECTOR(SIGNED(rs1(31 downto 0)) + UNSIGNED(rs2(31 downto 0)));	  
+				rd(63 downto 32) <= STD_LOGIC_VECTOR(SIGNED(rs1(63 downto 32)) + UNSIGNED(rs2(63 downto 32)));
+				rd(95 downto 64) <= STD_LOGIC_VECTOR(SIGNED(rs1(95 downto 64)) + UNSIGNED(rs2(95 downto 64)));
+				rd(127 downto 96) <= STD_LOGIC_VECTOR(SIGNED(rs1(127 downto 96)) + UNSIGNED(rs2(127 downto 96)));
 			
 			-------------------------
             when "01100" =>  -- CNT1H
@@ -645,8 +645,12 @@ begin
             when "01111" =>  -- BCW
 			-----------------------
 			
-			
-			
+				for i in 0 to 3 loop
+					
+					rd(31 + (32*i) downto (32 * i)) <= 	 rs1(127 downto 96); --Copying left most word from rs1 into each word of rd
+				
+				end loop;
+				
 			-------------------------
             when "10000" =>  -- MAXWS
 			-------------------------
