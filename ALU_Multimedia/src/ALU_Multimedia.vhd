@@ -578,10 +578,10 @@ begin
 				-- Adding them
 				-- Converting result back to type STD_LOGIC_VECTOR
 				-- Write value to rd, regardless of overflow/underflow
-				rd(31 downto 0) <= STD_LOGIC_VECTOR(SIGNED(rs1(31 downto 0)) + UNSIGNED(rs2(31 downto 0)));	  
-				rd(63 downto 32) <= STD_LOGIC_VECTOR(SIGNED(rs1(63 downto 32)) + UNSIGNED(rs2(63 downto 32)));
-				rd(95 downto 64) <= STD_LOGIC_VECTOR(SIGNED(rs1(95 downto 64)) + UNSIGNED(rs2(95 downto 64)));
-				rd(127 downto 96) <= STD_LOGIC_VECTOR(SIGNED(rs1(127 downto 96)) + UNSIGNED(rs2(127 downto 96)));
+				rd(31 downto 0) <= STD_LOGIC_VECTOR(UNSIGNED(rs1(31 downto 0)) + UNSIGNED(rs2(31 downto 0)));	  
+				rd(63 downto 32) <= STD_LOGIC_VECTOR(UNSIGNED(rs1(63 downto 32)) + UNSIGNED(rs2(63 downto 32)));
+				rd(95 downto 64) <= STD_LOGIC_VECTOR(UNSIGNED(rs1(95 downto 64)) + UNSIGNED(rs2(95 downto 64)));
+				rd(127 downto 96) <= STD_LOGIC_VECTOR(UNSIGNED(rs1(127 downto 96)) + UNSIGNED(rs2(127 downto 96)));
 			
 			-------------------------
             when "01100" =>  -- CNT1H
