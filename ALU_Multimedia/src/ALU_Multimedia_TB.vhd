@@ -1,0 +1,23 @@
+-------------------------------------------------------------------------------
+--
+-- Title       : ALU_TB
+-- Design      : ProjectPartI
+-- Author      : Anirvan Kothuri and Mahir Patel
+-- Company     : Stony Brook University
+--
+-------------------------------------------------------------------------------
+--
+-- File        : C:
+-- Generated   : Mon Oct 27 15:20:31 2025
+-- From        : Interface description file
+-- By          : ItfToHdl ver. 1.0
+--
+-------------------------------------------------------------------------------
+--
+-- Description :ALU Test bench designed to test random cases and edge cases for each function
+--
+-------------------------------------------------------------------------------
+
+--{{ Section below this comment is automatically maintained
+--   and may be overwritten
+--{entity {ALU_TB} architecture {Behavioral}}
