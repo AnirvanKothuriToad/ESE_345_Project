@@ -55,24 +55,31 @@ begin
 			rs2 => rs2,
 			rs1 => rs1,
 			ld_in => ld_in,
+			rd => rd,
 			imm => imm
 		);
 		
-	-- System Clock Process
-	clock_gen : process
-	begin
-		wait for clk_period/2;
-		loop	-- inifinite loop
-			wait for clk_period/2;
-			exit when END_SIM = true;
-		end loop;
-		std.env.finish;
-	end process;
-	
+
 	-- Simulation control process
 	sim_cntrl: process
 	begin
-		--MAIN CODE FOR TESTING EACH FUNCTION GOES HERE 
+		rd <= (others => '0'); --setting rd to 0 
+		--MAIN CODE FOR TESTING EACH FUNCTION GOES HERE
+			--Testing first 4 16 bit R4 Functions
+			        --Normal Addition	  --Overflow Add	 --Underflow Add		 --Subtract		    --Overflow Sub			--Underflow Sub
+			rs2 <= "0000000000000001" & "0000000000000010" & "0000000000000011" & "0000000000000100" & "0000000000000101" & "0000000000000110" & "0111111111111111" & "1000000000000000";
+			rs1 <= "0000000011000000" & "0111111111111111" & "1000000000000000" & "0000000000000001" & "1000000000000000" & "0111111111111111" & "0000000000000001" & "0000000000000001"; 
+			rs3 <= "0000000000000001" & "0000000000000001" & "0000000000000001" & "0000000000000001" & "0000000000000001" & "0000000000000001" & "0000000000000001" & "0000000000000001";
+			instr <= "00001"; --Testing  Signed Integer Multiply-Add Low with Saturation   
+			wait for 4ns;
+			
+		for i in 0 to 3 loop
+	
+			instr <= STD_LOGIC_VECTOR(UNSIGNED(instr) + 1); --first 4 16 bit R4 Functions
+			wait for 4ns;
+			
+		end loop;
+		
 		std.env.finish;		-- done
 	end process;
 	
