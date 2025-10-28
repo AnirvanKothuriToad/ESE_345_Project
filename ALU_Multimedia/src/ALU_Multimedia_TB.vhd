@@ -63,7 +63,7 @@ begin
 	-- Simulation control process
 	sim_cntrl: process
 	begin
-		rd <= (others => '0'); --setting rd to 0 
+		--rd <= (others => '0'); --setting rd to 0 
 		--MAIN CODE FOR TESTING EACH FUNCTION GOES HERE
 			--Testing first 4 16 bit R4 Functions
 			        --Normal Addition	  --Overflow Add	 --Underflow Add		 --Subtract		    --Overflow Sub			--Underflow Sub
