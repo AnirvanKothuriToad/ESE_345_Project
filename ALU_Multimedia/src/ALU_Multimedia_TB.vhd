@@ -63,9 +63,25 @@ begin
 	-- Simulation control process
 	sim_cntrl: process
 	begin
-		--rd <= (others => '0'); --setting rd to 0 
-		--MAIN CODE FOR TESTING EACH FUNCTION GOES HERE
-			--Testing first 4 16 bit R4 Functions
+		   -----------------------------------------
+		   --Testing Load Immediate Function--------
+		   -----------------------------------------
+		   rs1 <= (others => '0'); --Clearing rs1 initially
+		   instr <= "00000"; --setting instruction to Load Immediate   
+		   ld_in <= "000"; --Testing for load index =0
+		   imm <= "1100000000000011"; --Setting a value for immediate to test
+		   wait for 4ns;
+		   
+		   for i in 0 to 6 loop --testing for remaining 7 indices through a for loop
+			   
+			   ld_in <= STD_LOGIC_VECTOR(UNSIGNED(ld_in) + 1); --incrementing index
+			   
+			   wait for 4ns;
+			   
+		   end loop;
+		
+		    --Testing first 4 16 bit R4 Functions 
+		   	ld_in <= "000"; --Not testing load index
 			        --Normal Addition	  --Overflow Add	 --Underflow Add		 --Subtract		    --Overflow Sub			--Underflow Sub
 			rs2 <= "0000000000000001" & "0000000000000010" & "0000000000000011" & "0000000000000100" & "0000000000000101" & "0000000000000110" & "0111111111111111" & "1000000000000000";
 			rs1 <= "0000000011000000" & "0111111111111111" & "1000000000000000" & "0000000000000001" & "1000000000000000" & "0111111111111111" & "0000000000000001" & "0000000000000001"; 
