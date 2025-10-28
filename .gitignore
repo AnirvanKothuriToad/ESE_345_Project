@@ -12,3 +12,7 @@
 
 # 5. "Un-ignore" Python files
 !*.py
+
+# 6. But, RE-IGNORE common Python cache/junk folders
+__pycache__/
+*.pyc
