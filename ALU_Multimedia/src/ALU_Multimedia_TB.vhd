@@ -82,9 +82,10 @@ begin
 		   end loop;
 		   
 		   ------TESTING R4 FUNCTIONS------------------------------------
-		   --------------------------------------------------------------
-		   --Testing Signed Integer Multiply add/sub and Low/High
-		   --------------------------------------------------------------
+		   
+		   		--------------------------------------------------------------
+		   		--Testing Signed Integer Multiply add/sub and Low/High (16 bit variant)
+		   		--------------------------------------------------------------
 		   
 		   	ld_in <= "000"; --Not testing load index
 			        --Normal Addition	  --Overflow Add	 --Underflow Add		 --Subtract		    --Overflow Sub			--Underflow Sub
@@ -94,24 +95,42 @@ begin
 			instr <= "00001"; --Testing  Signed Integer Multiply-Add Low with Saturation   
 			wait for 4ns;
 			
-			for i in 0 to 3 loop
+			for i in 0 to 2 loop
 	
 				instr <= STD_LOGIC_VECTOR(UNSIGNED(instr) + 1); --first 4 16 bit R4 Functions
 				wait for 4ns;
 			
 			end loop;
 			
-			-----------------------------------------------------------
-			--Testing Signed Long Integer Multiply Add/Sub and Low/High
-			-----------------------------------------------------------
+					-----------------------------------------------------------
+					--Testing Signed Long Integer Multiply Add and LOW and HIGH (32 bit variant)
+					-----------------------------------------------------------
 			
+					 --Normal Addition					  --Overflow Addition				   --Underflow Addition
+			rs2 <= "00000000000000010000000000000001" & "01111111111111110111111111111111" & "00000000000000000000000000000001" & "00000000000000000000000000000000";
+			rs1 <= "00000000000000000000000000000001" & "01111111111111110111111111111111" & "10000000000000000000000000000000" & "00000000000000000000000000000000";
+			rs3 <= "00000000000000000000000000000001" & "00000000000000000000000000000001" & "00000000000000000000000000000001" & "00000000000000000000000000000001";
 			
+			instr <= "00101"; --Setting instruction to SIGN LONG MULTIPLY ADD LOW
+			wait for 4ns; --Allowing new inputs to update and compute rd
 			
+			instr <= "00110"; --Setting instruction to SIGN LONG MULTIPLY ADD HIGH
+			wait for 4ns; --Computing rd
 			
+					-----------------------------------------------------------
+					--Testing Signed Long Integer Multiply Subtract and LOW and HIGH (32 bit variant)
+					-----------------------------------------------------------
 			
+					--Normal Subtraction					--Overflow Subtraction				  --Underflow Subtraction
+			rs2 <= "00000000000000010000000000000000" & "01111111111111110111111111111111" & "00000000000000000000000000000001" & "00000000000000000000000000000000";
+			rs1 <= "00000000000000000000000000000001" & "10000000000000000000000000000000" & "10000000000000000000000000000000" & "00000000000000000000000000000000";
+			rs3 <= "00000000000000000000000000000001" & "00000000000000000000000000000001" & "00000000000000000000000000000001" & "00000000000000000000000000000000";
 			
+			instr <= "00111"; --Setting instruction to SIGN LONG MULTIPLY SUB LOW 
+			wait for 4ns; --Allowing new inputs to update and compute rd
 			
-			
+			instr <= "01000"; --Setting instruction to SIGN LONG MULTIPLY SUB HIGH
+			wait for 4ns; --Computing rd
 			
 		   -------END OF R4 FUNCTION TESTING--------------------------
 		   
