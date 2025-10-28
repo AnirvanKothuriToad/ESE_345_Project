@@ -9,3 +9,6 @@
 
 # 4. "Un-ignore" all VHDL files (files ending in .vhd)
 !*.vhd
+
+# 5. "Un-ignore" Python files
+!*.py
