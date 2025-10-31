@@ -552,7 +552,7 @@ begin
             when "01001" =>  -- NOP
 			-----------------------
 			
-				rd <= rd;	-- Do nothing basically
+				rd <= (others => '-');	-- Do nothing basically
 			
 			-------------------------
             when "01010" =>  -- SHRHI
