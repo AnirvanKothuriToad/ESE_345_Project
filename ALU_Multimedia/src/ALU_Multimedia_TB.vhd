@@ -37,8 +37,6 @@ architecture TB_Architecture of ALU_Multimedia_TB is
 	signal rs3    :    STD_LOGIC_VECTOR(127 downto 0);
 	signal rs2    :    STD_LOGIC_VECTOR(127 downto 0);
 	signal rs1    :    STD_LOGIC_VECTOR(127 downto 0);
-	signal ld_in  :    STD_LOGIC_VECTOR(2 downto 0);
-	signal imm    :    STD_LOGIC_VECTOR(15 downto 0);
 	
 	--Observed Signal
 	signal rd     :    STD_LOGIC_VECTOR(127 downto 0);
