@@ -53,9 +53,7 @@ begin
 			rs3 => rs3,
 			rs2 => rs2,
 			rs1 => rs1,
-			ld_in => ld_in,
-			rd => rd,
-			imm => imm
+			rd => rd
 		);
 		
 
@@ -65,16 +63,15 @@ begin
 		   -----------------------------------------
 		   --Testing Load Immediate Function--------
 		   -----------------------------------------
-		   
-		   rs1 <= (others => '0'); --Clearing rs1 initially
-		   instr <= "00000"; --setting instruction to Load Immediate   
-		   ld_in <= "000"; --Testing for load index =0
-		   imm <= "1100000000000011"; --Setting a value for immediate to test
+
+		   -- rs1(15 downto 0) = imm
+		   -- rs1(18 downto 16) = ld_in
+		   rs1 <= "0000000000000000" & "0000000000000000" & "0000000000000000" & "0000000000000000" & "0000000000000000" & "0000000000000000" & "0000000000000000" & "1100000000000011";
 		   wait for 4ns;
 		   
 		   for i in 0 to 6 loop --testing for remaining 7 indices through a for loop
 			   
-			   ld_in <= STD_LOGIC_VECTOR(UNSIGNED(ld_in) + 1); --incrementing index
+			   rs1(18 downto 16) <= STD_LOGIC_VECTOR(UNSIGNED(rs1(18 downto 16)) + 1); --incrementing index
 			   
 			   wait for 4ns;
 			   
