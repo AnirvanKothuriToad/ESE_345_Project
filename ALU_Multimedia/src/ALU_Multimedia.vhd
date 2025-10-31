@@ -34,9 +34,6 @@ entity ALU is
         rs2   : in STD_LOGIC_VECTOR(127 downto 0);
         rs1   : in STD_LOGIC_VECTOR(127 downto 0);
 
-        ld_in : in STD_LOGIC_VECTOR(2 downto 0);
-        imm   : in STD_LOGIC_VECTOR(15 downto 0);
-
         rd    : out STD_LOGIC_VECTOR(127 downto 0)
     );
 end ALU;
@@ -57,7 +54,11 @@ architecture behavioral of ALU is
 	
 begin
 
-    process(instr, rs3, rs2, rs1, ld_in, imm) is 
+    process(instr, rs3, rs2, rs1) is 
+	
+	--Variables for Load immediate
+	  variable imm:  STD_LOGIC_VECTOR(15 downto 0); --Represents the immediate value
+	  variable ld_in: UNSIGNED(2 downto 0);	 --Index value 
 	
 	--Variables for Signed Multiplty Add High, Low 
 		
@@ -142,16 +143,18 @@ begin
 			----------------------------------
             when "00000" =>  -- Load Immediate
 			----------------------------------	
-			
-                case ld_in is
-                    when "000" => rd <= rs1(127 downto 16) & imm;
-                    when "001" => rd <= rs1(127 downto 32) & imm & rs1(15 downto 0);
-                    when "010" => rd <= rs1(127 downto 48) & imm & rs1(31 downto 0);
-                    when "011" => rd <= rs1(127 downto 64) & imm & rs1(47 downto 0);
-                    when "100" => rd <= rs1(127 downto 80) & imm & rs1(63 downto 0);
-                    when "101" => rd <= rs1(127 downto 96) & imm & rs1(79 downto 0);
-                    when "110" => rd <= rs1(127 downto 112) & imm & rs1(95 downto 0);
-                    when "111" => rd <= imm & rs1(111 downto 0);
+				imm := rs1(15 downto 0); --Extracting 16 LSBs from RS1 to obtain the immediate value
+				ld_in := UNSIGNED(rs1(18 downto 16)); --Using Bits 18, 17, 16 for the index value
+				
+                case STD_LOGIC_VECTOR(ld_in) is
+                    when "000" => rd <= rs2(127 downto 16) & imm;
+                    when "001" => rd <= rs2(127 downto 32) & imm & rs2(15 downto 0);
+                    when "010" => rd <= rs2(127 downto 48) & imm & rs2(31 downto 0);
+                    when "011" => rd <= rs2(127 downto 64) & imm & rs2(47 downto 0);
+                    when "100" => rd <= rs2(127 downto 80) & imm & rs2(63 downto 0);
+                    when "101" => rd <= rs2(127 downto 96) & imm & rs2(79 downto 0);
+                    when "110" => rd <= rs2(127 downto 112) & imm & rs2(95 downto 0);
+                    when "111" => rd <= imm & rs2(111 downto 0);
                     when others => rd <= (others => 'X');
                 end case;
 
