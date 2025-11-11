@@ -33,7 +33,7 @@ entity InstrBuffer is
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
 		clk : in STD_LOGIC;							   	-- Clock signal
 		write_enable : in STD_LOGIC;					  	-- If enabled, write to register pointed to by address_in
-		address : in STD_LOGIC_VECTOR(6 downto 0);			-- Address (0 to 63)
+		PC_in  : in STD_LOGIC_VECTOR(6 downto 0);			-- PC input address (0 to 63)
 		
 		data_in : in STD_LOGIC_VECTOR(24 downto 0);			-- Value to write to current line address	  
 		data_out : out STD_LOGIC_VECTOR(24 downto 0)	   		-- Value read from current line address
@@ -66,13 +66,13 @@ begin
 			
 			if rising_edge(clk) then 	-- Update on every positive edge of clk 
 				
-				-- Read value pointed to by PC
+				-- Read value pointed to by PC (connected to address input)
 				
-				data_out <= INSTR_BUFFER(TO_INTEGER(UNSIGNED(address)));
+				data_out <= INSTR_BUFFER(TO_INTEGER(UNSIGNED(PC_in)));
 			
 				if (write_enable = '1')	then -- Write is enabled, write to pointed-to register
 					
-					INSTR_BUFFER(TO_INTEGER(UNSIGNED(address))) <= data_in;
+					INSTR_BUFFER(TO_INTEGER(UNSIGNED(PC_in))) <= data_in;
 					
 					
 				end if;
