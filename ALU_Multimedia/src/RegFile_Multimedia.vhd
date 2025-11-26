@@ -35,15 +35,15 @@ entity RegFile is
 		write_enable : in STD_LOGIC;					   -- If enabled, write to register pointed to by address_in
 		
 		
-		address_out_A : in STD_LOGIC_VECTOR(5 downto 0);   -- Register to read from (A)
-		address_out_B : in STD_LOGIC_VECTOR(5 downto 0);   -- Register to read from (B)
-		address_out_C : in STD_LOGIC_VECTOR(5 downto 0);   -- Register to read from (C)	
+		address_out_A : in STD_LOGIC_VECTOR(4 downto 0);   -- Register to read from (A)
+		address_out_B : in STD_LOGIC_VECTOR(4 downto 0);   -- Register to read from (B)
+		address_out_C : in STD_LOGIC_VECTOR(4 downto 0);   -- Register to read from (C)	
 		data_out_A : out STD_LOGIC_VECTOR(127 downto 0);   -- Value read from register (A)
 		data_out_B : out STD_LOGIC_VECTOR(127 downto 0);   -- Value read from register (B)
 		data_out_C : out STD_LOGIC_VECTOR(127 downto 0);   -- Value read from register (C)
 		
 		
-		address_in : in STD_LOGIC_VECTOR(5 downto 0); 	   -- Register to write to
+		address_in : in STD_LOGIC_VECTOR(4 downto 0); 	   -- Register to write to
 		data_in : in STD_LOGIC_VECTOR(127 downto 0)		   -- Value to write to register
 		
 	);
