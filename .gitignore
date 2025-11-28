@@ -9,3 +9,9 @@
 
 # 4. "Un-ignore" all VHDL files (files ending in .vhd)
 !*.vhd
+
+# 5. "Un-ignore" all .cpp files
+!*.cpp
+
+# 6. "Un-ignore" all .txt files
+!*.txt
