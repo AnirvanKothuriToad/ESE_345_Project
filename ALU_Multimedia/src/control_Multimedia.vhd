@@ -104,7 +104,7 @@ begin
 			write_enable <= '1';	-- All instructions except NOP write back to reg file 
 			is_load <= '0';			-- Not load immediate instruction  
 			
-			case instr(18 downto 15)	-- Useful opcode, rest is don't cares
+			case instr(18 downto 15) is	-- Useful opcode, rest is don't cares
 				
 				when "0000" =>	-- NOP	
 					ALU_op <= "01001";
