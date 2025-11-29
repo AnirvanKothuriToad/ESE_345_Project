@@ -23,7 +23,56 @@
 --{entity {CPU} architecture {CPU}}
 
  
+	-------------------------------
+	--PC Register------------------
+	-------------------------------
+
+library IEEE;
+use IEEE.std_logic_1164.all; 
+use IEEE.numeric_std.all;
+use work.all;
+
+entity PC is
+	port(	
+		reset : in STD_LOGIC;							  	-- Asynchronous reset
+		clk : in STD_LOGIC;							   		-- Clock signal	 
+		data_out : out STD_LOGIC_VECTOR(6 downto 0)	   		-- PC output
+													
+	);
+end PC;
+
+--}} End of automatically maintained section
+
+architecture behavioral of PC is  
+
+begin
+
+	process (reset, clk) is	-- Only operating on rising clock edges unless reset is asserted
 	
+	begin
+		if (reset = '1') then	-- Asynchronous reset, does not rely on clk
+			
+			-- Clear PC
+			
+			data_out <= (others => '0');
+			
+			
+		else  -- reset not asserted, function normally
+			
+			if rising_edge(clk) then 	-- Update on every positive edge of clk 
+				
+				-- Increment PC value on every clock edge
+				data_out <= STD_LOGIC_VECTOR(UNSIGNED(data_out) + 1);	-- PC <= PC + 1
+				
+				
+			end if;
+			
+		end if;	
+					
+	end process;
+
+end behavioral;
+
 	-------------------------------
 	--INSTRUCTION BUFFER-----------
 	-------------------------------
@@ -532,6 +581,68 @@ end behavioral;
 	--Forwarding Unit
 	--------------------
 	
+library IEEE;
+use IEEE.std_logic_1164.all; 
+use IEEE.numeric_std.all;
+use work.all;
+
+entity forwarding is
+	port(	  
+	
+		-- Register numbers that are being read by current instruction
+		rs1 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs1 input
+		rs2 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs2 input
+		rs3 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs3 input
+		
+		-- Register that is being written to in last instruction
+		rd : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rd input
+		
+		-- Register values to forward to
+		rs1_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs1_d output
+		rs2_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs2_d output
+		rs3_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs3_d output	
+		
+		-- Register value to forward
+		rd_d : in STD_LOGIC_VECTOR(127 downto 0);			-- rd_d input 
+		
+		forward : out STD_LOGIC								-- Forwarding MUX control signal
+		
+	);
+end forwarding;
+
+--}} End of automatically maintained section
+
+architecture behavioral of forwarding is  
+
+begin
+
+	process(rs1, rs2, rs3, rd, rd_d) is	-- Only operating on rising clock edges unless reset is asserted
+	
+	begin		  
+		
+		if rd = rs1 then   
+			
+			-- If register that is being written to matches register that is being read from, forward value
+			forward <= '1';		-- Assert forward control signal	  
+			rs1_d <= rd_d;		-- Directly copy value for rd_d to rs1_d
+			
+		elsif rd = rs2 then
+			forward <= '1';	  
+			rs2_d <= rd_d;
+			
+		elsif rd = rs3 then	
+			forward <= '1';	  
+			rs3_d <= rd_d;
+			
+		else  -- Forwarding unnecessary, turn off control signal
+			forward <= '0';
+			
+		end if;
+		
+	end process;
+
+end behavioral;
+
 	
 	
 	
@@ -1445,8 +1556,13 @@ entity EXWB is
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
 		clk : in STD_LOGIC;							   		-- Clock signal	
 		
-		rd_in : in STD_LOGIC_VECTOR(127 downto 0);	   		-- rd input
-		rd_out : out STD_LOGIC_VECTOR(127 downto 0)	   		-- rd output
+		-- Destination register number
+		rd_in : in STD_LOGIC_VECTOR(4 downto 0);		  		-- rd input
+		rd_out : out STD_LOGIC_VECTOR(4 downto 0);				-- rd output  
+		
+		-- Destination register data
+		rd_d_in : in STD_LOGIC_VECTOR(127 downto 0);	   		-- rd_d input
+		rd_d_out : out STD_LOGIC_VECTOR(127 downto 0)	   		-- rd_d output
 	);
 end EXWB;
 
@@ -1463,15 +1579,16 @@ begin
 			
 			-- Clear register
 			
-			rd_out <= (others => '0'); 
+			rd_out <= (others => '0'); 	 
+			rd_d_out <= (others => '0'); 
 			
 			
 		else  -- reset not asserted, function normally
 			
 			if rising_edge(clk) then 	-- Update on every positive edge of clk 
 				
-				-- 128-bit shift register
-				rd_out <= rd_in;
+				rd_out <= rd_in; 
+				rd_d_out <= rd_d_in;
 				
 				
 			end if;
@@ -1482,7 +1599,149 @@ begin
 
 end behavioral;
 
+---------------------------
+--STRUCTURAL UNIT----------
+---------------------------
+
+
 entity CPU is
+	------------------------------
+	--Local Signals for PC Register
+	------------------------------	
+		signal pc_out : std_logic_vector(5 downto 0);
+	
+	------------------------------	
+	--Local Signals for Instruction Buffer
+	------------------------------
+	
+		signal data_in : std_logic_vector(24 downto 0);	   --Value to write to current line address
+		signal data_out : std_logic_vector(24 downto 0);   --Value read from current line address
+		signal PC_in : std_logic_vector(5 downto 0);
+		
+	------------------------------	
+	--Local Signals for IF/ID
+	------------------------------
+	
+		signal IF_data_in : std_logic_vector(24 downto 0);
+		signal IF_data_out : std_logic_vector(24 downto 0);
+		
+	------------------------------	
+	--Local Signals for Control
+	------------------------------
+	
+		signal control_instr: std_logic_vector(24 downto 0);
+		
+		--Output signals 
+		signal ALU_op: std_logic_vector(4 downto 0); 
+		signal ALU_source: std_logic;
+		signal is_load: std_logic;
+		
+	------------------------------	
+	--Local Signals for Register File
+	------------------------------
+	
+		--Input Signals
+		signal address_out_A :  STD_LOGIC_VECTOR(4 downto 0);   -- Register to read from (A)
+		signal address_out_B :  STD_LOGIC_VECTOR(4 downto 0);   -- Register to read from (B)
+		signal address_out_C :  STD_LOGIC_VECTOR(4 downto 0);   -- Register to read from (C)
+		
+		--Output Signals
+		signal data_out_A :  	STD_LOGIC_VECTOR(127 downto 0);   -- Value read from register (A)
+		signal data_out_B :  	STD_LOGIC_VECTOR(127 downto 0);   -- Value read from register (B)
+		signal data_out_C :  	STD_LOGIC_VECTOR(127 downto 0);   -- Value read from register (C)
+		
+		signal address_in: std_logic_vector(4 downto 0);
+		signal data_in: std_logic_vector(127 downto 0);
+		
+	------------------------------	
+	--Local Signals for ID/EX
+	------------------------------
+	
+	    signal rs1_in :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs1 input
+		 signal rs1_out :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs1 output 
+		
+		 signal rs2_in :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs2 input
+		 signal rs2_out :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs2 output 
+		
+		 signal rs3_in :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs3 input
+		 signal rs3_out :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs3 output 
+		
+		-- Read register data (rs1_d, rs2_d, rs3_d)
+		 signal rs1_d_in :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs1_d input
+		 signal rs1_d_out :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs1_d output
+		
+		 signal rs2_d_in :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs2_d input
+		 signal rs2_d_out :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs2_d output
+		
+		 signal rs3_d_in :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs3_d input
+		 signal rs3_d_out :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs3_d output
+		
+		
+		-- Write register number (rd)
+		 signal rd_in :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rd input
+		 signal rd_out :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rd output
+		
+		
+		-- Load immediate (imm, ind)
+		 signal imm_in :  STD_LOGIC_VECTOR(15 downto 0);			-- imm input	 
+		 signal imm_out :  STD_LOGIC_VECTOR(15 downto 0);		-- imm output 
+		
+		 signal ind_in :  STD_LOGIC_VECTOR(2 downto 0);			-- ind input
+		 signal ind_out :  STD_LOGIC_VECTOR(2 downto 0);			-- ind output
+		
+		
+		-- R4 Format (long/int, subtract/add, high/low)
+		 signal LI_SA_HL_in :  STD_LOGIC_VECTOR(2 downto 0);		-- LI/SA/HL input
+		 signal LI_SA_HL_out :  STD_LOGIC_VECTOR(2 downto 0);	-- LI/SA/HL output	
+		
+		-- R3 Format (opcode)
+		 signal opcode_in :  STD_LOGIC_VECTOR(7 downto 0);		-- opcode input
+		 signal opcode_out :  STD_LOGIC_VECTOR(7 downto 0);		-- opcode output
+		 
+	------------------------------
+	--Local Signals for ALU
+	------------------------------
+	
+	     signal ALU_instr :  STD_LOGIC_VECTOR(4 downto 0);
+         signal rs3   :  STD_LOGIC_VECTOR(127 downto 0);
+         signal rs2   :  STD_LOGIC_VECTOR(127 downto 0);
+         signal rs1   : STD_LOGIC_VECTOR(127 downto 0);
+
+        signal rd    :  STD_LOGIC_VECTOR(127 downto 0);
+		
+	------------------------------	
+	--Local Signals for EX/WB
+	------------------------------
+	
+	   -- Destination register number
+		signal rd_in :  STD_LOGIC_VECTOR(4 downto 0);		  		-- rd input
+		signal rd_out :  STD_LOGIC_VECTOR(4 downto 0);				-- rd output  
+		
+		-- Destination register data
+		signal rd_d_in :  STD_LOGIC_VECTOR(127 downto 0);	   		-- rd_d input
+		signal rd_d_out :  STD_LOGIC_VECTOR(127 downto 0);	   		-- rd_d output
+		
+	------------------------------	
+	--Local Signals for Forwarding Unit
+	------------------------------	
+	
+		-- Register numbers that are being read by current instruction
+		signal rs1 :  STD_LOGIC_VECTOR(4 downto 0);	   			-- rs1 input
+		signal rs2 :  STD_LOGIC_VECTOR(4 downto 0);	   			-- rs2 input
+		signal rs3 :  STD_LOGIC_VECTOR(4 downto 0);	   			-- rs3 input
+		
+		-- Register that is being written to in last instruction
+		signal rd :  STD_LOGIC_VECTOR(4 downto 0);	   			-- rd input
+		
+		-- Register values to forward to
+		signal rs1_d :  STD_LOGIC_VECTOR(127 downto 0);	   		-- rs1_d output
+		signal rs2_d :  STD_LOGIC_VECTOR(127 downto 0);	   		-- rs2_d output
+		signal rs3_d :  STD_LOGIC_VECTOR(127 downto 0);	   		-- rs3_d output	
+		
+		-- Register value to forward
+		signal rd_d :  STD_LOGIC_VECTOR(127 downto 0);			-- rd_d input 
+		
+		signal forward :  STD_LOGIC;								-- Forwarding MUX control signal
 	
 end CPU;
 
