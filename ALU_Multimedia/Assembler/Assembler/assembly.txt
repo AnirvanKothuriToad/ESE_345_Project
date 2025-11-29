@@ -1,0 +1,4 @@
+li r1 15 0
+slimals r5 r2 r3 r4
+au r8 r6 r7
+nop
