@@ -14,7 +14,7 @@
 --
 -------------------------------------------------------------------------------
 --
--- Description : EX/WB pipeline register for multimedia processor
+-- Description : Design to generate control signals for pipelined processor
 --
 -------------------------------------------------------------------------------
 
