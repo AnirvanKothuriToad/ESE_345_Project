@@ -32,6 +32,20 @@ entity IDEX is
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
 		clk : in STD_LOGIC;							   		-- Clock signal	
 		
+		-- Outputs of decoder
+		write_enable_in : in STD_LOGIC;						-- write enable in
+		write_enable_out : out STD_LOGIC;					-- write enable out
+		
+		ALU_op_in : in STD_LOGIC_VECTOR(4 downto 0);		-- ALU operation in
+		ALU_op_out : out STD_LOGIC_VECTOR(4 downto 0);		-- ALU operation out
+		
+		ALU_source_in : in STD_LOGIC;						-- ALU source in
+		ALU_source_out : out STD_LOGIC;						-- ALU source out
+		
+		is_load_in : in STD_LOGIC;							-- is_load input
+		is_load_out : out STD_LOGIC;						-- is_load output
+		
+		
 		-- Read register numbers (rs1, rs2, rs3)
 		rs1_in : in STD_LOGIC_VECTOR(4 downto 0);	   		-- rs1 input
 		rs1_out : out STD_LOGIC_VECTOR(4 downto 0);	   		-- rs1 output 
@@ -63,16 +77,8 @@ entity IDEX is
 		imm_out : out STD_LOGIC_VECTOR(15 downto 0);		-- imm output 
 		
 		ind_in : in STD_LOGIC_VECTOR(2 downto 0);			-- ind input
-		ind_out : out STD_LOGIC_VECTOR(2 downto 0);			-- ind output
+		ind_out : out STD_LOGIC_VECTOR(2 downto 0)			-- ind output
 		
-		
-		-- R4 Format (long/int, subtract/add, high/low)
-		LI_SA_HL_in : in STD_LOGIC_VECTOR(2 downto 0);		-- LI/SA/HL input
-		LI_SA_HL_out : out STD_LOGIC_VECTOR(2 downto 0);	-- LI/SA/HL output	
-		
-		-- R3 Format (opcode)
-		opcode_in : in STD_LOGIC_VECTOR(7 downto 0);		-- opcode input
-		opcode_out : out STD_LOGIC_VECTOR(7 downto 0)		-- opcode output
 		
 	);
 end IDEX;
@@ -89,7 +95,11 @@ begin
 		if (reset = '1') then	-- Asynchronous reset, does not rely on clk
 			
 			-- Clear register
-			 
+			write_enable_out <= '0';   
+			ALU_op_out <= (others => '0'); 
+			ALU_source_out <= '0'; 
+			is_load_out <= '0'; 
+			
 			rs1_out <= (others => '0');
 			rs2_out <= (others => '0');
 			rs3_out <= (others => '0');
@@ -103,16 +113,15 @@ begin
 			imm_out	<= (others => '0');
 			ind_out <= (others => '0');
 			
-			LI_SA_HL_out <= (others => '0');   
-			
-			opcode_out <= (others => '0');
-			
 			
 		else  -- reset not asserted, function normally
 			
 			if rising_edge(clk) then 	-- Update on every positive edge of clk 
 				
-				-- Shift register with various inputs/outputs
+				write_enable_out <= write_enable_in;
+				ALU_op_out <= ALU_op_in;
+				ALU_source_out <= ALU_source_in;
+				is_load_out <= is_load_in;
 				
 				rs1_out <= rs1_in;
 				rs2_out <= rs2_in;
@@ -126,11 +135,6 @@ begin
 				
 				imm_out <= imm_in;
 				ind_out <= ind_in;
-				
-				LI_SA_HL_out <= LI_SA_HL_in;
-				
-				opcode_out <= opcode_in;
-				
 				
 			end if;
 			
