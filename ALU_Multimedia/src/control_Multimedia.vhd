@@ -31,9 +31,11 @@ entity control is
 	port(	
 		instr : in STD_LOGIC_VECTOR(24 downto 0);	-- Binary instruction 
 	   
-		write_enable : out STD_LOGIC;				-- Write enable (always on unless nop)	   
+		write_enable : out STD_LOGIC;				-- Write enable (always on unless nop)	
+		
 		ALU_op : out STD_LOGIC_VECTOR(4 downto 0);	-- ALU operation 						
-		ALU_source : out STD_LOGIC;					-- Choose between register or immediate based on instruction	
+		ALU_source : out STD_LOGIC;					-- Choose between register or immediate based on instruction
+		
 		is_load	: out STD_LOGIC						-- Switch MUX inputs if load instruction 
 													-- (rs1(18 downto 16) <= load_index, rs1(15 downto 0) <= load_imm, rs2 <= rd)
 		
@@ -64,7 +66,8 @@ begin
 		---------------------------------------------
 			
 			write_enable <= '1';	-- Always on for any R4 instruction
-			is_load <= '0';			-- Not load immediate instruction
+			is_load <= '0';			-- Not load immediate instruction 
+			ALU_source <= '0';		-- Only used for SHRHI and MLCHS R3 instructions
 			
 			case instr(22 downto 20) is
 				
@@ -102,7 +105,8 @@ begin
 		-------------------------
 		
 			write_enable <= '1';	-- All instructions except NOP write back to reg file 
-			is_load <= '0';			-- Not load immediate instruction  
+			is_load <= '0';			-- Not load immediate instruction
+			ALU_source <= '0'		-- Only asserted on SHRHI and MLHCU
 			
 			case instr(18 downto 15) is	-- Useful opcode, rest is don't cares
 				
@@ -113,7 +117,8 @@ begin
 					
 				
 				when "0001" =>	-- SHRHI	
-					ALU_op <= "01010";
+					ALU_op <= "01010"; 
+					ALU_source <= '1';	-- Using 4 LSBs of 5-bit immediate value of rs2 from instruction
 				
 				
 				when "0010" =>	-- AU	
@@ -150,6 +155,7 @@ begin
 				
 				when "1010" =>	-- MLHCU	
 					ALU_op <= "10011";
+					ALU_source <= '1'; -- Using 5-bit immediate value of rs2 from instruction
 				
 				
 				when "1011" =>	-- AND	
@@ -169,11 +175,10 @@ begin
 				
 				
 				when "1111" =>	-- SFHS	
-					ALU_op <= "11000";
+					ALU_op <= "11000"; 
 				
-				when others =>
-					write_enable <= '0'; --Not writing to ID/EX register file
-					ALU_op <= (others => 'X');
+				when others => 	-- Invalid
+					ALU_op <= "XXXXX";
 				
 			end case;		
 				
