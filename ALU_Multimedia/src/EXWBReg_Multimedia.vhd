@@ -32,8 +32,13 @@ entity EXWB is
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
 		clk : in STD_LOGIC;							   		-- Clock signal	
 		
-		rd_in : in STD_LOGIC_VECTOR(127 downto 0);	   		-- rd input
-		rd_out : out STD_LOGIC_VECTOR(127 downto 0)	   		-- rd output
+		-- Destination register number
+		rd_in : in STD_LOGIC_VECTOR(4 downto 0);		  		-- rd input
+		rd_out : out STD_LOGIC_VECTOR(4 downto 0);				-- rd output  
+		
+		-- Destination register data
+		rd_d_in : in STD_LOGIC_VECTOR(127 downto 0);	   		-- rd_d input
+		rd_d_out : out STD_LOGIC_VECTOR(127 downto 0)	   		-- rd_d output
 	);
 end EXWB;
 
@@ -50,15 +55,16 @@ begin
 			
 			-- Clear register
 			
-			rd_out <= (others => '0'); 
+			rd_out <= (others => '0'); 	 
+			rd_d_out <= (others => '0'); 
 			
 			
 		else  -- reset not asserted, function normally
 			
 			if rising_edge(clk) then 	-- Update on every positive edge of clk 
 				
-				-- 128-bit shift register
-				rd_out <= rd_in;
+				rd_out <= rd_in; 
+				rd_d_out <= rd_d_in;
 				
 				
 			end if;
