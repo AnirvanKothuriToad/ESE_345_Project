@@ -106,7 +106,7 @@ begin
 		
 			write_enable <= '1';	-- All instructions except NOP write back to reg file 
 			is_load <= '0';			-- Not load immediate instruction
-			ALU_source <= '0'		-- Only asserted on SHRHI and MLHCU
+			ALU_source <= '0';		-- Only asserted on SHRHI and MLHCU
 			
 			case instr(18 downto 15) is	-- Useful opcode, rest is don't cares
 				
