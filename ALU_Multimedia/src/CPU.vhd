@@ -139,7 +139,63 @@ begin
 
 end behavioral;
 
+--------------------------------
+--Structural Unit for Stage 1---
+--------------------------------
+library IEEE;
+use IEEE.std_logic_1164.all; 
+use IEEE.numeric_std.all;
+use work.all;
+
+entity stage_1 is
+	port(
+	    clk          : in  std_logic;
+        reset        : in  std_logic;
+        
+        -- Ports for Testbench to create results file
+        load_en   : in  std_logic; 
+        load_addr : in  std_logic_vector(5 downto 0);
+        load_data : in  std_logic_vector(24 downto 0);
+        
+        -- Outputs
+        instr_out    : out std_logic_vector(24 downto 0);
+        pc_out       : out std_logic_vector(5 downto 0)
+	);
+end stage_1;
+
+
+architecture structural of stage_1 is
+
+	signal current_pc : std_logic_vector(5 downto 0); --Internal PC Signal
 	
+	signal buffer_addr_in : std_logic_vector(5 downto 0); 
+	
+begin
+	
+	pc_out <= current_pc; --Connecting local signal to port
+	
+	buffer_addr_in <= load_addr when load_en = '1' else current_pc;	--When load_en is asserted, address from testbench will be used
+	
+	u0: entity PC
+		port map(
+		reset => reset,
+		clk => clk,
+		data_out => current_pc --connecting PC value to local signal
+		);
+	
+	u1: entity InstrBuffer
+		port map(
+		reset => reset,
+		clk => clk,
+		write_enable => load_en,
+		PC_in => buffer_addr_in,
+		data_in => load_data,
+		data_out => instr_out
+		);
+end structural;
+		
+--------End of Stage_1 Structural---------	
+
 	------------------------------------
 	--IF/ID Pipeline Register-----------
 	------------------------------------
@@ -446,7 +502,121 @@ begin
 					
 	end process;
 
-end behavioral;
+end behavioral;	
+
+--------------------------------
+--Structural Unit for Stage 2---
+--------------------------------
+
+library IEEE;
+use IEEE.std_logic_1164.all; 
+use IEEE.numeric_std.all;
+use work.all;
+
+entity stage_2 is 
+	port(
+	
+	clk: in std_logic;
+	reset: in std_logic;
+	
+	--Input from IF/ID Register(Instruction)
+	intr_in : std_logic_vector(24 downto 0);
+	
+	--Inputs from Write Back Stage
+	wb_reg_write: in std_logic;
+	wb_dest_addr: in std_logic_vector(4 downto 0);
+	wb_write_data: in std_logic_vector(127 downto 0);
+	
+	--Outputs to ID?EX Register
+	--Control Signals
+	ctrl_write_en : out std_logic;
+	ctrl_alu_op	  : out std_logic_vector(4 downto 0);
+	ctr_alu_src	  : out std_logic;
+	ctrl_is_load  : out std_logic;
+	
+	rs1_data      : out std_logic_vector(127 downto 0);
+    rs2_data      : out std_logic_vector(127 downto 0);
+    rs3_data      : out std_logic_vector(127 downto 0);
+        
+    -- Forwarded Addresses & Immediates
+    rs1_addr_out  : out std_logic_vector(4 downto 0);
+    rs2_addr_out  : out std_logic_vector(4 downto 0);
+    rs3_addr_out  : out std_logic_vector(4 downto 0);
+    rd_addr_out   : out std_logic_vector(4 downto 0);
+    imm_out       : out std_logic_vector(15 downto 0);
+    ld_idx_out    : out std_logic_vector(2 downto 0)
+	);
+end stage_2;
+
+architecture structural of stage_2 is
+
+	--Internal signals for register addresses
+	signal addr_a : std_logic_vector(4 downto 0);  --For rs1
+	signal addr_b : std_logic_vector(4 downto 0);  --For rs2
+	signal addr_c : std_logic_vector(4 downto 0);  --For rs3
+	
+	signal sig_is_load : std_logic;	 --MUX input if instruction is load or not
+
+begin
+	
+	u0: entity control
+		port map(
+			instr => instr_in,
+			write_enable => ctr_write_en,
+			ALU_op => ctrl_alu_op,
+			ALU_source => ctrl_alu_src,
+			is_load => sig_is_load
+		);
+		
+	ctrl_is_load <= sig_is_load; --Passing the signal to ID/EX register
+	
+	--RS1 bits 9-5
+	addr_a <= instr_in(9 downto 5);
+	
+	--RS3 is always bits 19-15 for R4
+	addr_c <= instr_in(19 downto 15);
+	
+	--RS2 MUX needed
+	-- If LI (sig_is_load ='1') then destination register has to be read
+	addr_b <= instr_in(4 downto 0) when sig_is_load = '1' else instr_in(14 downto 10);
+		
+		
+	--Accessing Register File entity
+	u1: entity regFile
+		port map(
+			clk => clk,
+			reset => reset,
+			
+			--Write Back input connection
+			write_enable => wb_reg_write,
+			address_in => wb_dest_addr,
+			data_in => wb_write_data,
+			
+			--Read Ports
+			address_out_A => addr_a,
+			address_out_B => addr_b,
+			address_out_C => addr_c,
+			
+			--Read Data outputs(Going to ID/EX)
+			data_out_A => rs1_data,
+			data_out_B => rs2_data,
+			data_out_C => rs3_data
+		); 
+	
+	--Send data to ID/EX (Needed in Forwarding)
+	rs1_addr_out <= addr_a;
+    rs2_addr_out <= addr_b;
+    rs3_addr_out <= addr_c;
+    rd_addr_out  <= instr_in(4 downto 0); -- location of rd
+    
+    -- Send Immediate values to ID/EX (for 'li' in ALU)
+    imm_out      <= instr_in(20 downto 5);
+    ld_idx_out   <= instr_in(23 downto 21);
+	
+end structural 
+
+
+--------End of Stage_2 Structural---------
 
 	------------------------------------
 	--ID/EX Pipeline Register-----------
@@ -461,6 +631,20 @@ entity IDEX is
 	port(	
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
 		clk : in STD_LOGIC;							   		-- Clock signal	
+		
+		-- Outputs of decoder
+		write_enable_in : in STD_LOGIC;						-- write enable in
+		write_enable_out : out STD_LOGIC;					-- write enable out
+		
+		ALU_op_in : in STD_LOGIC_VECTOR(4 downto 0);		-- ALU operation in
+		ALU_op_out : out STD_LOGIC_VECTOR(4 downto 0);		-- ALU operation out
+		
+		ALU_source_in : in STD_LOGIC;						-- ALU source in
+		ALU_source_out : out STD_LOGIC;						-- ALU source out
+		
+		is_load_in : in STD_LOGIC;							-- is_load input
+		is_load_out : out STD_LOGIC;						-- is_load output
+		
 		
 		-- Read register numbers (rs1, rs2, rs3)
 		rs1_in : in STD_LOGIC_VECTOR(4 downto 0);	   		-- rs1 input
@@ -493,16 +677,8 @@ entity IDEX is
 		imm_out : out STD_LOGIC_VECTOR(15 downto 0);		-- imm output 
 		
 		ind_in : in STD_LOGIC_VECTOR(2 downto 0);			-- ind input
-		ind_out : out STD_LOGIC_VECTOR(2 downto 0);			-- ind output
+		ind_out : out STD_LOGIC_VECTOR(2 downto 0)			-- ind output
 		
-		
-		-- R4 Format (long/int, subtract/add, high/low)
-		LI_SA_HL_in : in STD_LOGIC_VECTOR(2 downto 0);		-- LI/SA/HL input
-		LI_SA_HL_out : out STD_LOGIC_VECTOR(2 downto 0);	-- LI/SA/HL output	
-		
-		-- R3 Format (opcode)
-		opcode_in : in STD_LOGIC_VECTOR(7 downto 0);		-- opcode input
-		opcode_out : out STD_LOGIC_VECTOR(7 downto 0)		-- opcode output
 		
 	);
 end IDEX;
@@ -519,7 +695,11 @@ begin
 		if (reset = '1') then	-- Asynchronous reset, does not rely on clk
 			
 			-- Clear register
-			 
+			write_enable_out <= '0';   
+			ALU_op_out <= (others => '0'); 
+			ALU_source_out <= '0'; 
+			is_load_out <= '0'; 
+			
 			rs1_out <= (others => '0');
 			rs2_out <= (others => '0');
 			rs3_out <= (others => '0');
@@ -533,16 +713,15 @@ begin
 			imm_out	<= (others => '0');
 			ind_out <= (others => '0');
 			
-			LI_SA_HL_out <= (others => '0');   
-			
-			opcode_out <= (others => '0');
-			
 			
 		else  -- reset not asserted, function normally
 			
 			if rising_edge(clk) then 	-- Update on every positive edge of clk 
 				
-				-- Shift register with various inputs/outputs
+				write_enable_out <= write_enable_in;
+				ALU_op_out <= ALU_op_in;
+				ALU_source_out <= ALU_source_in;
+				is_load_out <= is_load_in;
 				
 				rs1_out <= rs1_in;
 				rs2_out <= rs2_in;
@@ -557,11 +736,6 @@ begin
 				imm_out <= imm_in;
 				ind_out <= ind_in;
 				
-				LI_SA_HL_out <= LI_SA_HL_in;
-				
-				opcode_out <= opcode_in;
-				
-				
 			end if;
 			
 		end if;	
@@ -569,6 +743,7 @@ begin
 	end process;
 
 end behavioral;
+
 
 
 
