@@ -32,21 +32,30 @@ entity IDEX is
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
 		clk : in STD_LOGIC;							   		-- Clock signal	
 		
+		-- Read register numbers (rs1, rs2, rs3)
+		rs1_in : in STD_LOGIC_VECTOR(4 downto 0);	   		-- rs1 input
+		rs1_out : out STD_LOGIC_VECTOR(4 downto 0);	   		-- rs1 output 
 		
-		-- Read registers (rs1, rs2, rs3)
-		rs1_in : in STD_LOGIC_VECTOR(127 downto 0);	   		-- rs1 input
-		rs1_out : out STD_LOGIC_VECTOR(127 downto 0);	   	-- rs1 output
+		rs2_in : in STD_LOGIC_VECTOR(4 downto 0);	   		-- rs2 input
+		rs2_out : out STD_LOGIC_VECTOR(4 downto 0);	   		-- rs2 output 
 		
-		rs2_in : in STD_LOGIC_VECTOR(127 downto 0);	   		-- rs2 input
-		rs2_out : out STD_LOGIC_VECTOR(127 downto 0);	   	-- rs2 output
+		rs3_in : in STD_LOGIC_VECTOR(4 downto 0);	   		-- rs3 input
+		rs3_out : out STD_LOGIC_VECTOR(4 downto 0);	   		-- rs3 output 
 		
-		rs3_in : in STD_LOGIC_VECTOR(127 downto 0);	   		-- rs3 input
-		rs3_out : out STD_LOGIC_VECTOR(127 downto 0);	   	-- rs3 output
+		-- Read register data (rs1_d, rs2_d, rs3_d)
+		rs1_d_in : in STD_LOGIC_VECTOR(127 downto 0);	   	-- rs1_d input
+		rs1_d_out : out STD_LOGIC_VECTOR(127 downto 0);	   	-- rs1_d output
+		
+		rs2_d_in : in STD_LOGIC_VECTOR(127 downto 0);	   	-- rs2_d input
+		rs2_d_out : out STD_LOGIC_VECTOR(127 downto 0);	   	-- rs2_d output
+		
+		rs3_d_in : in STD_LOGIC_VECTOR(127 downto 0);	   	-- rs3_d input
+		rs3_d_out : out STD_LOGIC_VECTOR(127 downto 0);	   	-- rs3_d output
 		
 		
-		-- Write register (rd)
-		rd_in : in STD_LOGIC_VECTOR(127 downto 0);	   		-- rd input
-		rd_out : out STD_LOGIC_VECTOR(127 downto 0);	   	-- rd output
+		-- Write register number (rd)
+		rd_in : in STD_LOGIC_VECTOR(4 downto 0);	   		-- rd input
+		rd_out : out STD_LOGIC_VECTOR(4 downto 0);	   		-- rd output
 		
 		
 		-- Load immediate (imm, ind)
@@ -85,6 +94,10 @@ begin
 			rs2_out <= (others => '0');
 			rs3_out <= (others => '0');
 			
+			rs1_d_out <= (others => '0');
+			rs2_d_out <= (others => '0');
+			rs3_d_out <= (others => '0');
+			
 			rd_out <= (others => '0');
 			
 			imm_out	<= (others => '0');
@@ -103,7 +116,11 @@ begin
 				
 				rs1_out <= rs1_in;
 				rs2_out <= rs2_in;
-				rs3_out <= rs3_in; 
+				rs3_out <= rs3_in; 		 
+				
+				rs1_d_out <= rs1_d_in;
+				rs2_d_out <= rs2_d_in;
+				rs3_d_out <= rs3_d_in; 
 				
 				rd_out <= rd_in;
 				
