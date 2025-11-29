@@ -33,7 +33,7 @@ entity InstrBuffer is
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
 		clk : in STD_LOGIC;							   	-- Clock signal
 		write_enable : in STD_LOGIC;					  	-- If enabled, write to register pointed to by address_in
-		PC_in  : in STD_LOGIC_VECTOR(6 downto 0);			-- PC input address (0 to 63)
+		PC_in  : in STD_LOGIC_VECTOR(5 downto 0);			-- PC input address (0 to 63)
 		
 		data_in : in STD_LOGIC_VECTOR(24 downto 0);			-- Value to write to current line address	  
 		data_out : out STD_LOGIC_VECTOR(24 downto 0)	   		-- Value read from current line address

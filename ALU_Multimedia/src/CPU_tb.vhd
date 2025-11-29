@@ -65,8 +65,10 @@ architecture behavioral of CPU_tb is
     signal res_Instruction : std_logic_vector(24 downto 0);   -- Current Instruction being Fetched
     signal res_ALU_Result  : std_logic_vector(127 downto 0);  -- Result from EXE stage
     
-    -- Forwarding Control Signal
-    signal res_Forward : std_logic;
+    -- Forwarding Control Signals 
+    signal res_Forward_A   : std_logic_vector(1 downto 0);    -- MUX control for rs1
+    signal res_Forward_B   : std_logic_vector(1 downto 0);    -- MUX control for rs2
+    signal res_Forward_C   : std_logic_vector(1 downto 0);    -- MUX control for rs3
     
     -- Write Back Stage Info
     signal res_WB_Data     : std_logic_vector(127 downto 0);  -- What is actually being written to RegFile
@@ -218,7 +220,11 @@ begin
 				write(line_out, string'(" | "));
 				
 				--C4: Forwarding Unit for rs1
-				write(line_out, res_Forward);
+				write(line_out, res_Forward_A);
+				write(line_out, string'(" | "));
+				write(line_out, res_Forward_B);
+				write(line_out, string'(" | "));
+				write(line_out, res_Forward_C);
 				write(line_out, string'(" | "));
 				
 				--C5: ALU Result in Hexa

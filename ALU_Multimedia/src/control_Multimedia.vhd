@@ -171,7 +171,9 @@ begin
 				when "1111" =>	-- SFHS	
 					ALU_op <= "11000";
 				
-				
+				when others =>
+					write_enable <= '0'; --Not writing to ID/EX register file
+					ALU_op <= (others => 'X');
 				
 			end case;		
 				
