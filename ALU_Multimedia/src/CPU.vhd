@@ -2211,25 +2211,33 @@ begin
             wb_write_data => ew_alu_result,
 			
 			-- Control Outputs
-            ctrl_write_en => s2_write_en,
-            ctrl_alu_op   => s2_alu_op,
-            ctrl_alu_src  => s2_alu_src,
-            ctrl_is_load  => s2_is_load,
-			
-			-- Data Outputs
-            rs1_data      => s2_rs1_data,
-            rs2_data      => s2_rs2_data,
-            rs3_data      => s2_rs3_data,
+			--wb_reg_write  => EX_we_out,  
+--            wb_dest_addr  => EX_rd_out,  
+--            wb_write_data => EX_rd_d_out, 
             
-            -- Address/Immediate Outputs
-            rs1_addr_out  => s2_rs1_addr,
-            rs2_addr_out  => s2_rs2_addr,
-            rs3_addr_out  => s2_rs3_addr,
-            rd_addr_out   => s2_rd_addr,
-            imm_out       => s2_imm,
-            ld_idx_out    => s2_ld_idx,
-			
-			reg_file_out => res_s2_reg_file
+            ctrl_write_en => s2_write_en, ctrl_alu_op => s2_alu_op, ctrl_alu_src => s2_alu_src, ctrl_is_load => s2_is_load,
+            rs1_data => s2_rs1_data, rs2_data => s2_rs2_data, rs3_data => s2_rs3_data,
+            rs1_addr_out => s2_rs1_addr, rs2_addr_out => s2_rs2_addr, rs3_addr_out => s2_rs3_addr, 
+            rd_addr_out => s2_rd_addr, imm_out => s2_imm, ld_idx_out => s2_ld_idx,
+            reg_file_out => res_s2_reg_file												            --ctrl_write_en => s2_write_en,
+															--            ctrl_alu_op   => s2_alu_op,
+															--            ctrl_alu_src  => s2_alu_src,
+															--            ctrl_is_load  => s2_is_load,
+															--			
+															--			-- Data Outputs
+															--            rs1_data      => s2_rs1_data,
+															--            rs2_data      => s2_rs2_data,
+															--            rs3_data      => s2_rs3_data,
+															--            
+															--            -- Address/Immediate Outputs
+															--            rs1_addr_out  => s2_rs1_addr,
+															--            rs2_addr_out  => s2_rs2_addr,
+															--            rs3_addr_out  => s2_rs3_addr,
+															--            rd_addr_out   => s2_rd_addr,
+															--            imm_out       => s2_imm,
+															--            ld_idx_out    => s2_ld_idx,
+															--			
+															--			reg_file_out => res_s2_reg_file
 		);
 		
 	----------------
@@ -2340,8 +2348,9 @@ begin
 		res_PC <= s1_pc_out;
 		res_Instruction <= 	 IF_data_in;
 		res_ALU_Result  <= 	 s3_alu_result;
-	    res_WB_Data     <= 	 ew_alu_result;
-	    res_RegWrite    <= 	 ew_write_en;
+		res_WB_Data     <= EX_rd_d_out; 
+    	res_RegWrite    <= EX_we_out;									    --res_WB_Data     <= 	 ew_alu_result;
+											    --res_RegWrite    <= 	 ew_write_en;
 	    res_Forward	    <=   forward_ctrl_sig; 
 		
 		reg_file_contents <= res_s2_reg_file;
