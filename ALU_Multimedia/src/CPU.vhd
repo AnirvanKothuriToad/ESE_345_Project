@@ -36,7 +36,7 @@ entity PC is
 	port(	
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
 		clk : in STD_LOGIC;							   		-- Clock signal	 
-		data_out : out STD_LOGIC_VECTOR(6 downto 0)	   		-- PC output
+		data_out : out STD_LOGIC_VECTOR(5 downto 0)	   		-- PC output
 													
 	);
 end PC;
@@ -264,9 +264,11 @@ entity control is
 	port(	
 		instr : in STD_LOGIC_VECTOR(24 downto 0);	-- Binary instruction 
 	   
-		write_enable : out STD_LOGIC;				-- Write enable (always on unless nop)	   
+		write_enable : out STD_LOGIC;				-- Write enable (always on unless nop)	
+		
 		ALU_op : out STD_LOGIC_VECTOR(4 downto 0);	-- ALU operation 						
-		ALU_source : out STD_LOGIC;					-- Choose between register or immediate based on instruction	
+		ALU_source : out STD_LOGIC;					-- Choose between register or immediate based on instruction
+		
 		is_load	: out STD_LOGIC						-- Switch MUX inputs if load instruction 
 													-- (rs1(18 downto 16) <= load_index, rs1(15 downto 0) <= load_imm, rs2 <= rd)
 		
@@ -291,13 +293,14 @@ begin
 			ALU_op <= (others => '0'); -- ALU operation for load immediate
 			write_enable <= '1';	-- Will be writing to rd
 			is_load <= '1'; 		-- Need to tell MUXs to switch
-		
+		    ALU_source <= '0';
 		---------------------------------------------	
 		elsif instr(23) = '0' then	-- R4 Instruction
 		---------------------------------------------
 			
 			write_enable <= '1';	-- Always on for any R4 instruction
-			is_load <= '0';			-- Not load immediate instruction
+			is_load <= '0';			-- Not load immediate instruction 
+			ALU_source <= '0';		-- Only used for SHRHI and MLCHS R3 instructions
 			
 			case instr(22 downto 20) is
 				
@@ -335,7 +338,8 @@ begin
 		-------------------------
 		
 			write_enable <= '1';	-- All instructions except NOP write back to reg file 
-			is_load <= '0';			-- Not load immediate instruction  
+			is_load <= '0';			-- Not load immediate instruction
+			ALU_source <= '0';		-- Only asserted on SHRHI and MLHCU
 			
 			case instr(18 downto 15) is	-- Useful opcode, rest is don't cares
 				
@@ -346,7 +350,8 @@ begin
 					
 				
 				when "0001" =>	-- SHRHI	
-					ALU_op <= "01010";
+					ALU_op <= "01010"; 
+					ALU_source <= '1';	-- Using 4 LSBs of 5-bit immediate value of rs2 from instruction
 				
 				
 				when "0010" =>	-- AU	
@@ -383,6 +388,7 @@ begin
 				
 				when "1010" =>	-- MLHCU	
 					ALU_op <= "10011";
+					ALU_source <= '1'; -- Using 5-bit immediate value of rs2 from instruction
 				
 				
 				when "1011" =>	-- AND	
@@ -402,11 +408,10 @@ begin
 				
 				
 				when "1111" =>	-- SFHS	
-					ALU_op <= "11000";
+					ALU_op <= "11000"; 
 				
-				when others =>
-					write_enable <= '0'; --Not writing to ID/EX register file
-					ALU_op <= (others => 'X');
+				when others => 	-- Invalid
+					ALU_op <= "XXXXX";
 				
 			end case;		
 				
@@ -415,6 +420,7 @@ begin
 	end process;
 
 end behavioral;
+
 
 	------------------------------------
 	--Register File-----------
@@ -520,7 +526,7 @@ entity stage_2 is
 	reset: in std_logic;
 	
 	--Input from IF/ID Register(Instruction)
-	intr_in : std_logic_vector(24 downto 0);
+	instr_in : std_logic_vector(24 downto 0);
 	
 	--Inputs from Write Back Stage
 	wb_reg_write: in std_logic;
@@ -531,7 +537,7 @@ entity stage_2 is
 	--Control Signals
 	ctrl_write_en : out std_logic;
 	ctrl_alu_op	  : out std_logic_vector(4 downto 0);
-	ctr_alu_src	  : out std_logic;
+	ctrl_alu_src	  : out std_logic;
 	ctrl_is_load  : out std_logic;
 	
 	rs1_data      : out std_logic_vector(127 downto 0);
@@ -562,7 +568,7 @@ begin
 	u0: entity control
 		port map(
 			instr => instr_in,
-			write_enable => ctr_write_en,
+			write_enable => ctrl_write_en,
 			ALU_op => ctrl_alu_op,
 			ALU_source => ctrl_alu_src,
 			is_load => sig_is_load
@@ -613,7 +619,7 @@ begin
     imm_out      <= instr_in(20 downto 5);
     ld_idx_out   <= instr_in(23 downto 21);
 	
-end structural 
+end structural; 
 
 
 --------End of Stage_2 Structural---------
