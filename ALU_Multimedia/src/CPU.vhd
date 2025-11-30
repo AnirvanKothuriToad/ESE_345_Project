@@ -2095,7 +2095,7 @@ architecture structural of CPU is
 	-----------------------------------------	 
 	
 		-- Control signals
-		signal WB_write_enable : in STD_LOGIC;				-- write enable
+		signal WB_write_enable : STD_LOGIC;				-- write enable
 	
 		-- Read registers passed from ID stage
 		signal WB_rs1 : STD_LOGIC_VECTOR(4 downto 0); 		-- rs number
@@ -2108,7 +2108,7 @@ architecture structural of CPU is
 		
 		-- Write registers from EX stage
 		signal WB_rd : STD_LOGIC_VECTOR(4 downto 0);  		-- rd number
-		signal WB_rd_d : STD_LOGIC_VECTOR(127 downto 0)		-- rd data	
+		signal WB_rd_d : STD_LOGIC_VECTOR(127 downto 0);		-- rd data	
 begin
    
 	------------
@@ -2200,7 +2200,7 @@ begin
             rs3_d_in         => s2_rs3_data,  rs3_d_out        => ie_rs3_data,
             
             imm_in           => s2_imm,       imm_out          => ie_imm,
-            ind_in           => s2_ld_idx,    ind_out          => ie_ld_idx,
+            ind_in           => s2_ld_idx,    ind_out          => ie_ld_idx
 		);
 		
 		
@@ -2256,7 +2256,7 @@ begin
 		
 	Stage_WB: entity writeback
 		port map ( 
-			write_enable	=> WB_write_enable
+			write_enable	=> WB_write_enable,
                    
 			rs1    			=> WB_rs1,	
 			rs2    			=> WB_rs2,
