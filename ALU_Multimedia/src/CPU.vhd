@@ -765,87 +765,10 @@ end behavioral;
 
 
 
+	
 --------------------------
 --STAGE 3------------------
 ---------------------------
-
-	--------------------
-	--Forwarding Unit
-	--------------------
-	
-library IEEE;
-use IEEE.std_logic_1164.all; 
-use IEEE.numeric_std.all;
-use work.all;
-
-entity forwarding is
-	port(	  
-	
-		-- Register numbers that are being read by current instruction
-		rs1 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs1 input
-		rs2 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs2 input
-		rs3 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs3 input
-		
-		-- Register that is being written to in last instruction
-		rd : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rd input
-		
-		-- Register values to forward to
-		rs1_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs1_d output
-		rs2_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs2_d output
-		rs3_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs3_d output	
-		
-		-- Register value to forward
-		rd_d : in STD_LOGIC_VECTOR(127 downto 0);			-- rd_d input 
-		
-		forward : out STD_LOGIC								-- Forwarding MUX control signal
-		
-	);
-end forwarding;
-
---}} End of automatically maintained section
-
-architecture behavioral of forwarding is  
-
-begin
-
-	process(rs1, rs2, rs3, rd, rd_d) is	-- Only operating on rising clock edges unless reset is asserted
-	
-	begin		  
-		
-		if rd = rs1 then   
-			
-			-- If register that is being written to matches register that is being read from, forward value
-			forward <= '1';		-- Assert forward control signal	  
-			rs1_d <= rd_d;		-- Directly copy value for rd_d to rs1_d
-			
-		elsif rd = rs2 then
-			forward <= '1';	  
-			rs2_d <= rd_d;
-			
-		elsif rd = rs3 then	
-			forward <= '1';	  
-			rs3_d <= rd_d;
-			
-		else  -- Forwarding unnecessary, turn off control signal
-			forward <= '0';
-			
-		end if;
-		
-	end process;
-
-end behavioral;
-
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	
 	-----------------
 	--ALU------------
@@ -1727,13 +1650,255 @@ begin
     end process;
 end behavioral;
 
+-------------------
+-- Execute Stage --
+-------------------
 
+library IEEE;
+use IEEE.std_logic_1164.all; 
+use IEEE.numeric_std.all;
+use work.all;
+
+entity execute is
+	port(	
+	
+	-- Control signals
+	write_enable_in : in STD_LOGIC;				-- write enable (pass to EXWB register)
+	write_enable_out : out STD_LOGIC;
+	
+	ALU_op : in STD_LOGIC_VECTOR(4 downto 0);	-- ALU operation (pass to ALU)
+	ALU_source : in STD_LOGIC;					-- ALU source (use in if statement to pass correct value into ALU)
+	is_load : in STD_LOGIC;						-- is_load (use in if statement to pass correct value into ALU)	 
+		
+	forward : in STD_LOGIC;						-- forward control signal (comes from forwarding unit in WB stage)
+	
+	-- Read register numbers
+	rs1 : in STD_LOGIC_VECTOR(4 downto 0);
+	rs2 : in STD_LOGIC_VECTOR(4 downto 0);
+	rs3 : in STD_LOGIC_VECTOR(4 downto 0);	 
+	
+	-- Read register data (not forwarded)
+	rs1_d : in STD_LOGIC_VECTOR(127 downto 0);	
+	rs2_d : in STD_LOGIC_VECTOR(127 downto 0);
+	rs3_d : in STD_LOGIC_VECTOR(127 downto 0);	
+	
+	-- Read register data (forwarded)
+	rs1_df : in STD_LOGIC_VECTOR(127 downto 0);	
+	rs2_df : in STD_LOGIC_VECTOR(127 downto 0);
+	rs3_df : in STD_LOGIC_VECTOR(127 downto 0);
+	
+	-- Write register number
+	rd_in : in STD_LOGIC_VECTOR(4 downto 0);   	
+	rd_out : out STD_LOGIC_VECTOR(4 downto 0);	
+	
+	-- Write register data
+	rd_d : out STD_LOGIC_VECTOR(127 downto 0);
+	
+	-- Load instruction values
+	imm : in STD_LOGIC_VECTOR(15 downto 0);
+	ind : in STD_LOGIC_VECTOR(2 downto 0)
+		
+		
+	);
+end execute;
+
+--}} End of automatically maintained section
+
+architecture structural of execute is  
+
+signal rs1_mux : STD_LOGIC_VECTOR(127 downto 0); 
+signal rs2_mux : STD_LOGIC_VECTOR(127 downto 0);
+-- rs3 never goes through a MUX
+
+begin 
+	
+	process (all) is
+	
+	begin
+	
+		if is_load = '1' then 
+			rs1_mux(15 downto 0) <= imm;
+			rs1_mux(18 downto 16) <= ind;
+			rs1_mux(127 downto 19) <= (others => '-');	-- Set rest as don't cares
+			
+			if forward = '1' then 
+				rs2_mux <= rs2_df;	-- rs2_d should be same as rd
+				
+			else 
+				rs2_mux <= rs2_d; 
+				
+			end if;
+		
+		elsif ALU_source = '1' then	
+			
+			if forward = '1' then
+				rs1_mux <= rs1_df;
+			
+			else
+				rs1_mux <= rs1_d;
+			
+			end if;
+			
+			rs2_mux(4 downto 0) <= rs2;	-- rs2 has the same value as the immediate field from original instruction 
+			
+		else 
+			rs1_mux <= rs1_d;
+			rs2_mux <= rs2_d;
+		
+		end if;
+		
+	end process;
+		
+	ALU : entity ALU(behavioral) port map (
+		instr => ALU_op,
+		rs1 => rs1_mux,
+		rs2 => rs2_mux,
+		rs3 => rs3_d,
+		rd => rd_d
+	);	
+	
+	rd_out <= rd_in;	-- Passes through this stage to write-back stage 
+	write_enable_out <= write_enable_in;
+	
+end structural;
 
 
 --------------
---Stage 4
+--Stage 4 Write Back
 --------------
 
+------------------
+-- Forward Unit --
+------------------
+library IEEE;
+use IEEE.std_logic_1164.all; 
+use IEEE.numeric_std.all;
+use work.all;
+
+entity forwarding is
+	port(	  
+	
+		-- Register numbers that are being read by current instruction
+		rs1 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs1 input
+		rs2 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs2 input
+		rs3 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs3 input
+		
+		-- Register that is being written to in last instruction
+		rd : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rd input
+		
+		-- Register values to forward to
+		rs1_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs1_d output
+		rs2_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs2_d output
+		rs3_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs3_d output	
+		
+		-- Register value to forward
+		rd_d : in STD_LOGIC_VECTOR(127 downto 0);			-- rd_d input 
+		
+		forward : out STD_LOGIC								-- Forwarding MUX control signal
+		
+	);
+end forwarding;
+
+--}} End of automatically maintained section
+
+architecture behavioral of forwarding is  
+
+begin
+
+	process(rs1, rs2, rs3, rd, rd_d) is	-- Only operating on rising clock edges unless reset is asserted
+	
+	begin		  
+		
+		if rd = rs1 then   
+			
+			-- If register that is being written to matches register that is being read from, forward value
+			forward <= '1';		-- Assert forward control signal	  
+			rs1_d <= rd_d;		-- Directly copy value for rd_d to rs1_d 
+			rs2_d <= (others => '-');	-- Other register data is don't cares 
+			rs3_d <= (others => '-');
+			
+		elsif rd = rs2 then
+			forward <= '1';
+			rs1_d <= (others => '-');
+			rs2_d <= rd_d;
+			rs3_d <= (others => '-');
+			
+		elsif rd = rs3 then	
+			forward <= '1';
+			rs1_d <= (others => '-');
+			rs2_d <= (others => '-');
+			rs3_d <= rd_d;
+			
+		else  -- Forwarding unnecessary, turn off control signal
+			forward <= '0';
+			rs1_d <= (others => '-');
+			rs2_d <= (others => '-');
+			rs3_d <= (others => '-');
+			
+		end if;
+		
+	end process;
+
+end behavioral;
+
+
+library IEEE;
+use IEEE.std_logic_1164.all; 
+use IEEE.numeric_std.all;
+use work.all;
+
+entity writeback is
+	port(	
+	
+		
+	-- Control signals
+	write_enable : in STD_LOGIC;				-- write enable
+	
+	-- Read registers passed from ID stage
+	rs1 : in STD_LOGIC_VECTOR(4 downto 0); 		-- rs number
+	rs2 : in STD_LOGIC_VECTOR(4 downto 0);
+	rs3 : in STD_LOGIC_VECTOR(4 downto 0);		 
+	
+	rs1_d : out STD_LOGIC_VECTOR(127 downto 0);	-- rs data
+	rs2_d : out STD_LOGIC_VECTOR(127 downto 0);
+	rs3_d : out STD_LOGIC_VECTOR(127 downto 0);
+	
+	-- Write registers from EX stage
+	rd : in STD_LOGIC_VECTOR(4 downto 0);  		-- rd number
+	rd_d : in STD_LOGIC_VECTOR(127 downto 0)	-- rd data	
+		
+	);
+end writeback;
+
+--}} End of automatically maintained section
+
+architecture structural of writeback is  
+
+
+signal forward : STD_LOGIC;
+
+begin 
+	
+	fw : entity forwarding(behavioral) port map (
+		rs1 => rs1,
+		rs2 => rs2,
+		rs3 => rs3,
+		
+		rs1_d => rs1_d,
+		rs2_d => rs2_d,
+		rs3_d => rs3_d,
+		
+		rd => rd,
+		
+		rd_d => rd_d, 
+		
+		forward => forward
+		
+	);	  
+	
+end structural;
+	
+	
 	--------------------
 	--EX/WB Pipeline Reg
 	--------------------
