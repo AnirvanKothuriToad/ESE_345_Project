@@ -2067,6 +2067,11 @@ architecture structural of CPU is
 		signal ew_write_en: std_logic;
 		signal ew_rd_addr: std_logic_vector(4 downto 0);
 		signal ew_alu_result: std_logic_vector(127 downto 0); --rd
+		signal EX_rd_in : std_logic_vector(4 downto 0);
+		signal EX_rd_out : std_logic_vector(4 downto 0);
+		
+		signal EX_rd_d_in : std_logic_vector(127 downto 0);
+		signal EX_rd_d_out : std_logic_vector(127 downto 0);
 		
 	------------------------------	
 	--Local Signals for Forwarding Unit
@@ -2088,7 +2093,7 @@ architecture structural of CPU is
 		-- Register value to forward
 		signal forward_rd_d :  STD_LOGIC_VECTOR(127 downto 0);			-- rd_d input 
 		
-		signal forward :  STD_LOGIC;								-- Forwarding MUX control signal
+		signal forward_ctrl_sig :  STD_LOGIC;								-- Forwarding MUX control signal
 
 	-----------------------------------------
 	-- Local Signals for Stage 4 - Write-back
@@ -2125,7 +2130,7 @@ begin
 			load_data => load_data,
 			
 			--Outputs
-			intsr_out => s1_instr_out, --Goes to IF/ID
+			instr_out => s1_instr_out, --Goes to IF/ID
 			pc_out => s1_pc_out --Necessary for generating results file
 		);
 		
@@ -2152,9 +2157,9 @@ begin
 			instr_in => IF_data_in,
 			
 			--Inputs from Writeback CHANGE	based on Stage 3/4
-			wb_reg_write  => wb_reg_write,
-            wb_dest_addr  => wb_dest_addr,
-            wb_write_data => wb_write_data,
+			wb_reg_write  => ew_write_en,
+            wb_dest_addr  => ew_rd_addr,
+            wb_write_data => ew_alu_result,
 			
 			-- Control Outputs
             ctrl_write_en => s2_write_en,
@@ -2204,7 +2209,7 @@ begin
 		);
 		
 		
-	Stage_ALU: entity stage_3
+	Stage_ALU: entity execute
 		port map (
 			--Control Inputs
 			write_enable_in => ie_write_en,
@@ -2214,7 +2219,7 @@ begin
 			is_load => ie_is_load,
 			
 			--Forwarding input control
-			forward => fwd_ctrl_sig,
+			forward => forward_ctrl_sig,
 			
 			--Register address inputs
 			rs1 => ie_rs1_addr,
@@ -2227,9 +2232,9 @@ begin
 			rs3_d => ie_rs3_data,
 			
 			--Forwarded Data Inputs from Stage 4
-			rs1_df => fwd_rs1_data,
-			rs2_df => fwd_rs2_data,
-			rs3_df => fwd_rs3_data,
+			rs1_df => forward_rs1_d,
+			rs2_df => forward_rs2_d,
+			rs3_df => forward_rs3_d,
 			
 			--Destination
 			rd_in => ie_rd_addr,
@@ -2246,11 +2251,11 @@ begin
 			reset 	=> reset,
 			clk 	=> clk,
 			
-			EX_rd_in 		=> rd_in,
-			EX_rd_out 		=> rd_out,
-			
-			EX_rd_d_in 		=> rd_d_in,
-			EX_rd_d_out 	=> rd_d_out 
+			rd_in 		=> EX_rd_in,
+			rd_out 		=> EX_rd_out,
+							      
+			rd_d_in 		=> EX_rd_d_in,
+			rd_d_out 	=> EX_rd_d_out 
 		
 		); 
 		
@@ -2277,7 +2282,7 @@ begin
 		res_ALU_Result  <= 	 s3_alu_result;
 	    res_WB_Data     <= 	 ew_alu_result;
 	    res_RegWrite    <= 	 ew_write_en;
-	    res_Forward	    <=   fwd_ctrl_sig;
+	    res_Forward	    <=   forward_ctrl_sig;
 		
 		
 end structural;
