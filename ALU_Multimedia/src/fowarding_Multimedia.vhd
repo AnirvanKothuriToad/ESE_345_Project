@@ -65,18 +65,27 @@ begin
 			
 			-- If register that is being written to matches register that is being read from, forward value
 			forward <= '1';		-- Assert forward control signal	  
-			rs1_d <= rd_d;		-- Directly copy value for rd_d to rs1_d
+			rs1_d <= rd_d;		-- Directly copy value for rd_d to rs1_d 
+			rs2_d <= (others => '-');	-- Other register data is don't cares 
+			rs3_d <= (others => '-');
 			
 		elsif rd = rs2 then
-			forward <= '1';	  
+			forward <= '1';
+			rs1_d <= (others => '-');
 			rs2_d <= rd_d;
+			rs3_d <= (others => '-');
 			
 		elsif rd = rs3 then	
-			forward <= '1';	  
+			forward <= '1';
+			rs1_d <= (others => '-');
+			rs2_d <= (others => '-');
 			rs3_d <= rd_d;
 			
 		else  -- Forwarding unnecessary, turn off control signal
 			forward <= '0';
+			rs1_d <= (others => '-');
+			rs2_d <= (others => '-');
+			rs3_d <= (others => '-');
 			
 		end if;
 		
