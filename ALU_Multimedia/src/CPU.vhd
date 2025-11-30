@@ -1957,7 +1957,7 @@ begin
 end behavioral;
 
 ---------------------------
---STRUCTURAL UNIT----------
+--Final CPU STRUCTURAL UNIT----------
 ---------------------------
 
 library IEEE;
@@ -2033,69 +2033,40 @@ architecture structural of CPU is
 	--Local Signals for ID/EX
 	------------------------------
 	
-	    signal ID_rs1_in :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs1 input
-		signal ID_rs1_out :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs1 output 
-		
-		signal ID_rs2_in :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs2 input
-		signal ID_rs2_out :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs2 output 
-		
-		signal ID_rs3_in :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs3 input
-		signal ID_rs3_out :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rs3 output 
-		
-		-- Read register data (rs1_d, rs2_d, rs3_d)
-		signal ID_rs1_d_in :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs1_d input
-		signal ID_rs1_d_out :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs1_d output
-		
-		signal ID_rs2_d_in :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs2_d input
-		signal ID_rs2_d_out :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs2_d output
-		
-		signal ID_rs3_d_in :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs3_d input
-		signal ID_rs3_d_out :  STD_LOGIC_VECTOR(127 downto 0);	   	-- rs3_d output
-		
-		
-		-- Write register number (rd)
-		signal ID_rd_in :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rd input
-		signal ID_rd_out :  STD_LOGIC_VECTOR(4 downto 0);	   		-- rd output
-		
-		
-		-- Load immediate (imm, ind)
-		signal ID_imm_in :  STD_LOGIC_VECTOR(15 downto 0);			-- imm input	 
-		signal ID_imm_out :  STD_LOGIC_VECTOR(15 downto 0);		-- imm output 
-		
-		signal ID_ind_in :  STD_LOGIC_VECTOR(2 downto 0);			-- ind input
-		signal ID_ind_out :  STD_LOGIC_VECTOR(2 downto 0);			-- ind output
-		
-		
-		-- R4 Format (long/int, subtract/add, high/low)
-		signal ID_LI_SA_HL_in :  STD_LOGIC_VECTOR(2 downto 0);		-- LI/SA/HL input
-		signal ID_LI_SA_HL_out :  STD_LOGIC_VECTOR(2 downto 0);	-- LI/SA/HL output	
-		
-		-- R3 Format (opcode)
-		signal ID_opcode_in :  STD_LOGIC_VECTOR(7 downto 0);		-- opcode input
-		signal ID_opcode_out :  STD_LOGIC_VECTOR(7 downto 0);		-- opcode output
+	signal ie_write_en     : std_logic;
+    signal ie_alu_op       : std_logic_vector(4 downto 0);
+    signal ie_alu_src      : std_logic;
+    signal ie_is_load      : std_logic;
+    
+    signal ie_rs1_data     : std_logic_vector(127 downto 0);
+    signal ie_rs2_data     : std_logic_vector(127 downto 0);
+    signal ie_rs3_data     : std_logic_vector(127 downto 0);
+    
+    signal ie_rs1_addr     : std_logic_vector(4 downto 0);
+    signal ie_rs2_addr     : std_logic_vector(4 downto 0);
+    signal ie_rs3_addr     : std_logic_vector(4 downto 0);
+    signal ie_rd_addr      : std_logic_vector(4 downto 0);
+    
+    signal ie_imm          : std_logic_vector(15 downto 0);
+    signal ie_ld_idx       : std_logic_vector(2 downto 0);
 		 
 	------------------------------
 	--Local Signals for Stage 3-Execute
 	------------------------------
 		
-	    signal ALU_instr :  STD_LOGIC_VECTOR(4 downto 0);
-        signal ALU_rs3   :  STD_LOGIC_VECTOR(127 downto 0);
-        signal ALU_rs2   :  STD_LOGIC_VECTOR(127 downto 0);
-        signal ALU_rs1   : STD_LOGIC_VECTOR(127 downto 0);
-
-        signal ALU_rd    :  STD_LOGIC_VECTOR(127 downto 0);
+	    signal s3_rd_addr :  STD_LOGIC_VECTOR(4 downto 0); --Register destination
+        signal s3_alu_result   :  STD_LOGIC_VECTOR(127 downto 0); --Register value
+		signal s3_write_en : std_logic;
+        
 		
 	------------------------------	
 	--Local Signals for EX/WB
 	------------------------------
 		
-	   	-- Destination register number
-		signal EX_rd_in :  STD_LOGIC_VECTOR(4 downto 0);		  		-- rd input
-		signal EX_rd_out :  STD_LOGIC_VECTOR(4 downto 0);				-- rd output  
-		
-		-- Destination register data
-		signal EX_rd_d_in :  STD_LOGIC_VECTOR(127 downto 0);	   		-- rd_d input
-		signal EX_rd_d_out :  STD_LOGIC_VECTOR(127 downto 0);	   		-- rd_d output
+		-- Destination register number
+		signal ew_write_en: std_logic;
+		signal ew_rd_addr: std_logic_vector(4 downto 0);
+		signal ew_alu_result: std_logic_vector(127 downto 0); --rd
 		
 	------------------------------	
 	--Local Signals for Forwarding Unit
@@ -2191,61 +2162,63 @@ begin
 	
 	RegIDEX: entity IDEX
 		port map (
-			clk => clk,
-			reset => reset,
-			
-			--Control inputs from Stage 2
-			write_enable_in  => s2_write_en,
-            ALU_op_in        => s2_alu_op,
-            ALU_source_in    => s2_alu_src,
-            is_load_in       => s2_is_load,
+			clk              => clk,
+            reset            => reset,
             
-            -- Register Address Inputs from Stage 2
-            rs1_in           => s2_rs1_addr,
-            rs2_in           => s2_rs2_addr,
-            rs3_in           => s2_rs3_addr,
-            rd_in            => s2_rd_addr,
+            write_enable_in  => s2_write_en,  write_enable_out => ie_write_en,
+            ALU_op_in        => s2_alu_op,    ALU_op_out       => ie_alu_op,
+            ALU_source_in    => s2_alu_src,   ALU_source_out   => ie_alu_src,
+            is_load_in       => s2_is_load,   is_load_out      => ie_is_load,
             
-            -- Data Inputs from Stage 2
-            rs1_d_in         => s2_rs1_data,
-            rs2_d_in         => s2_rs2_data,
-            rs3_d_in         => s2_rs3_data,
+            rs1_in           => s2_rs1_addr,  rs1_out          => ie_rs1_addr,
+            rs2_in           => s2_rs2_addr,  rs2_out          => ie_rs2_addr,
+            rs3_in           => s2_rs3_addr,  rs3_out          => ie_rs3_addr,
+            rd_in            => s2_rd_addr,   rd_out           => ie_rd_addr,
             
-            -- Immediate Inputs from Stage 2
-            imm_in           => s2_imm,
-            ind_in           => s2_ld_idx, 
-			
-			--Complete based on Stage 3/4
-			LI_SA_HL_in => 
-			opcode_in =>  
-			
-			--Change based on Stage 3
-			write_enable_out => 
-            ALU_op_out       => 
-            ALU_source_out   => 
-            is_load_out      => 
-            rs1_out          => 
-            rs2_out          => 
-            rs3_out          => 
-            rs1_d_out        => 
-            rs2_d_out        => 
-            rs3_d_out        => 
-            rd_out           => 
-            imm_out          => 
-            ind_out          => 
-            LI_SA_HL_out     => 
-            opcode_out       => 
+            rs1_d_in         => s2_rs1_data,  rs1_d_out        => ie_rs1_data,
+            rs2_d_in         => s2_rs2_data,  rs2_d_out        => ie_rs2_data,
+            rs3_d_in         => s2_rs3_data,  rs3_d_out        => ie_rs3_data,
+            
+            imm_in           => s2_imm,       imm_out          => ie_imm,
+            ind_in           => s2_ld_idx,    ind_out          => ie_ld_idx,
 		);
 		
 		
 	Stage_ALU: entity stage_3
 		port map (
-		
-		
-		
-		
-		
-		
+			--Control Inputs
+			write_enable_in => ie_write_en,
+			write_enable_out => s3_write_en,
+			ALU_op => ie_alu_op,
+			ALU_source => ie_alu_src,
+			is_load => ie_is_load,
+			
+			--Forwarding input control
+			forward => fwd_ctrl_sig,
+			
+			--Register address inputs
+			rs1 => ie_rs1_addr,
+			rs2 => ie_rs2_addr,
+			rs3 => ie_rs3_addr,
+			
+			--Data inputs with No Forwarding
+			rs1_d => ie_rs1_data,
+			rs2_d => ie_rs2_data,
+			rs3_d => ie_rs3_data,
+			
+			--Forwarded Data Inputs from Stage 4
+			rs1_df => fwd_rs1_data,
+			rs2_df => fwd_rs2_data,
+			rs3_df => fwd_rs3_data,
+			
+			--Destination
+			rd_in => ie_rd_addr,
+			rd_out => s3_rd_addr,
+			rd_d => s3_alu_result,
+			
+			--Immediates
+			imm => ie_imm,
+			ind => ie_ld_idx
 		);
 		
 	RegEXWB: entity EXWB
