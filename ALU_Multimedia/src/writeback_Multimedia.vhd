@@ -1,0 +1,151 @@
+-------------------------------------------------------------------------------
+--
+-- Title       : Write-back Stage
+-- Design      : ProjectPartI
+-- Author      : Anirvan Kothuri and Mahir Patel
+-- Company     : Stony Brook University
+--
+-------------------------------------------------------------------------------
+--
+-- File        : C:/Users/mpa32/Desktop/ESE 345/Project Part I/ProjectPartI/ProjectPartI/src/RegFile_Multimedia.vhd
+-- Generated   : Sat Nov  29 18:46:26 2025
+-- From        : Interface description file
+-- By          : ItfToHdl ver. 1.0
+--
+-------------------------------------------------------------------------------
+--
+-- Description : Strucutral design of write-back stage of multimedia pipelined processor
+--
+-------------------------------------------------------------------------------
+
+--{{ Section below this comment is automatically maintained
+--    and may be overwritten
+--{entity {writeback} architecture {behavioral}}	  	
+
+------------------
+-- Forward Unit --
+------------------
+
+library IEEE;
+use IEEE.std_logic_1164.all; 
+use IEEE.numeric_std.all;
+use work.all;
+
+entity forwarding is
+	port(	  
+	
+		-- Register numbers that are being read by current instruction
+		rs1 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs1 input
+		rs2 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs2 input
+		rs3 : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rs3 input
+		
+		-- Register that is being written to in last instruction
+		rd : in STD_LOGIC_VECTOR(4 downto 0);	   			-- rd input
+		
+		-- Register values to forward to
+		rs1_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs1_d output
+		rs2_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs2_d output
+		rs3_d : out STD_LOGIC_VECTOR(127 downto 0);	   		-- rs3_d output	
+		
+		-- Register value to forward
+		rd_d : in STD_LOGIC_VECTOR(127 downto 0);			-- rd_d input 
+		
+		forward : out STD_LOGIC								-- Forwarding MUX control signal
+		
+	);
+end forwarding;
+
+--}} End of automatically maintained section
+
+architecture behavioral of forwarding is  
+
+begin
+
+	process(rs1, rs2, rs3, rd, rd_d) is
+	
+	begin		  
+		
+		if rd = rs1 then   
+			
+			-- If register that is being written to matches register that is being read from, forward value
+			forward <= '1';		-- Assert forward control signal	  
+			rs1_d <= rd_d;		-- Directly copy value for rd_d to rs1_d
+			
+		elsif rd = rs2 then
+			forward <= '1';	  
+			rs2_d <= rd_d;
+			
+		elsif rd = rs3 then	
+			forward <= '1';	  
+			rs3_d <= rd_d;
+			
+		else  -- Forwarding unnecessary, turn off control signal
+			forward <= '0';
+			
+		end if;
+		
+	end process;
+
+end behavioral;
+
+
+
+----------------------
+-- Write-back Stage --
+----------------------
+
+library IEEE;
+use IEEE.std_logic_1164.all; 
+use IEEE.numeric_std.all;
+use work.all;
+
+entity writeback is
+	port(	
+	
+		
+	-- Control signals
+	write_enable : in STD_LOGIC;				-- write enable
+	
+	-- Read registers passed from ID stage
+	rs1 : in STD_LOGIC_VECTOR(4 downto 0); 		-- rs number
+	rs2 : in STD_LOGIC_VECTOR(4 downto 0);
+	rs3 : in STD_LOGIC_VECTOR(4 downto 0);		 
+	
+	rs1_d : out STD_LOGIC_VECTOR(127 downto 0);	-- rs data
+	rs2_d : out STD_LOGIC_VECTOR(127 downto 0);
+	rs3_d : out STD_LOGIC_VECTOR(127 downto 0);
+	
+	-- Write registers from EX stage
+	rd : in STD_LOGIC_VECTOR(4 downto 0);  		-- rd number
+	rd_d : in STD_LOGIC_VECTOR(127 downto 0)	-- rd data	
+		
+	);
+end writeback;
+
+--}} End of automatically maintained section
+
+architecture structural of writeback is  
+
+
+signal forward : STD_LOGIC;
+
+begin 
+	
+	fw : entity forwarding(behavioral) port map (
+		rs1 => rs1,
+		rs2 => rs2,
+		rs3 => rs3,
+		
+		rs1_d => rs1_d,
+		rs2_d => rs2_d,
+		rs3_d => rs3_d,
+		
+		rd => rd,
+		
+		rd_d => rd_d, 
+		
+		forward => forward
+		
+	);	  
+	
+end structural;
