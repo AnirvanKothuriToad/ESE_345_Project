@@ -32,6 +32,13 @@ use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 use work.all;
 
+package CPU_Defs is
+    type REG_FILE_ARRAY_TYPE is array (0 to 31) of std_logic_vector(127 downto 0);
+end package CPU_Defs;
+
+use work.CPU_Defs.all;
+
+
 entity PC is
 	port(	
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
@@ -1790,18 +1797,36 @@ use IEEE.numeric_std.all;
 use work.all;
 
 entity CPU is
+	port (
+		clk : in std_logic;
+	 	reset : in std_logic;
+		 
+		 --Testbench Ports in order to load instruction buffer
+		 load_en : in std_logic;
+		 load_addr : in std_logic_vector(5 downto 0);
+		 load_data : in std_logic_vector(24 downto 0);
+		 
+		 --Creating a connection between Register File and testbench
+		 reg_file_contents: out REG_FILE_ARRAY_TYPE;
+		 
+		 --Ports for Testbench to create Result file
+			res_PC : out std_logic_vector(5 downto 0);
+			res_Instruction : out std_logic_vector(24 downto 0);
+			res_ALU_Result  : out std_logic_vector(127 downto 0);
+        	res_Forward   	: out std_logic;
+        	res_WB_Data     : out std_logic_vector(127 downto 0);
+        	res_RegWrite    : out std_logic;
+end CPU;
+
+--}} End of automatically maintained section
+
+architecture structural of CPU is
 	------------------------------
-	--Local Signals for PC Register
+	--Local Signals for Stage 1-Fetch
 	------------------------------	
-		signal PC_out : std_logic_vector(5 downto 0);
+	signal s1_pc_out       : std_logic_vector(5 downto 0);
+    signal s1_instr_out    : std_logic_vector(24 downto 0);
 	
-	------------------------------	
-	--Local Signals for Instruction Buffer
-	------------------------------
-	
-		signal IB_data_in : std_logic_vector(24 downto 0);	   --Value to write to current line address
-		signal IB_data_out : std_logic_vector(24 downto 0);   --Value read from current line address
-		signal IB_PC_in : std_logic_vector(5 downto 0);
 		
 	------------------------------	
 	--Local Signals for IF/ID
@@ -1811,32 +1836,27 @@ entity CPU is
 		signal IF_data_out : std_logic_vector(24 downto 0);
 		
 	------------------------------	
-	--Local Signals for Control
+	--Local Signals for Stage 2-Decode
 	------------------------------
 	
-		signal control_instr: std_logic_vector(24 downto 0);
-		
-		--Output signals 
-		signal control_ALU_op: std_logic_vector(4 downto 0); 
-		signal control_ALU_source: std_logic;
-		signal control_is_load: std_logic;
-		
-	------------------------------	
-	--Local Signals for Register File
-	------------------------------
-	
-		--Input Signals
-		signal RF_address_out_A :  STD_LOGIC_VECTOR(4 downto 0);   -- Register to read from (A)
-		signal RF_address_out_B :  STD_LOGIC_VECTOR(4 downto 0);   -- Register to read from (B)
-		signal RF_address_out_C :  STD_LOGIC_VECTOR(4 downto 0);   -- Register to read from (C)
-		
-		--Output Signals
-		signal RF_data_out_A :  	STD_LOGIC_VECTOR(127 downto 0);   -- Value read from register (A)
-		signal RF_data_out_B :  	STD_LOGIC_VECTOR(127 downto 0);   -- Value read from register (B)
-		signal RF_data_out_C :  	STD_LOGIC_VECTOR(127 downto 0);   -- Value read from register (C)
-		
-		signal RF_address_in: std_logic_vector(4 downto 0);
-		signal RF_data_in: std_logic_vector(127 downto 0);
+		-- Control Signals
+    signal s2_write_en     : std_logic;
+    signal s2_alu_op       : std_logic_vector(4 downto 0);
+    signal s2_alu_src      : std_logic;
+    signal s2_is_load      : std_logic;
+    
+    -- Data Signals
+    signal s2_rs1_data     : std_logic_vector(127 downto 0);
+    signal s2_rs2_data     : std_logic_vector(127 downto 0);
+    signal s2_rs3_data     : std_logic_vector(127 downto 0);
+    
+    -- Addresses & Immediates
+    signal s2_rs1_addr     : std_logic_vector(4 downto 0);
+    signal s2_rs2_addr     : std_logic_vector(4 downto 0);
+    signal s2_rs3_addr     : std_logic_vector(4 downto 0);
+    signal s2_rd_addr      : std_logic_vector(4 downto 0);
+    signal s2_imm          : std_logic_vector(15 downto 0);
+    signal s2_ld_idx       : std_logic_vector(2 downto 0);
 		
 	------------------------------	
 	--Local Signals for ID/EX
@@ -1884,7 +1904,7 @@ entity CPU is
 		signal ID_opcode_out :  STD_LOGIC_VECTOR(7 downto 0);		-- opcode output
 		 
 	------------------------------
-	--Local Signals for ALU
+	--Local Signals for Stage 3-Execute
 	------------------------------
 		
 	    signal ALU_instr :  STD_LOGIC_VECTOR(4 downto 0);
@@ -1927,14 +1947,150 @@ entity CPU is
 		signal forward_rd_d :  STD_LOGIC_VECTOR(127 downto 0);			-- rd_d input 
 		
 		signal forward :  STD_LOGIC;								-- Forwarding MUX control signal
-	
-end CPU;
-
---}} End of automatically maintained section
-
-architecture structural of CPU is
 begin
-
-	-- Enter your statements here --
-
+   
+	------------
+	--STAGE 1---
+	------------
+	S1: entity stage_1
+		port map (
+			clk => clk,
+			reset => reset,
+			
+			--connecting local signals to inputs for testbench
+			load_en => load_en,
+			load_addr => load_addr,
+			load_data => load_data,
+			
+			--Outputs
+			intsr_out => s1_instr_out, --Goes to IF/ID
+			pc_out => s1_pc_out --Necessary for generating results file
+		);
+		
+	----------------
+	--PIPELINE IF/ID
+	----------------
+	RegIFID: entity IFID
+		port map (
+			clk => clk,
+			reset => reset,
+			data_in => s1_instr_out, --Connecting to Stage 1
+			data_out => IF_data_in   --Will be used to connect to stage 2
+		); 
+		
+	------------
+	--STAGE 2---
+	------------
+	S2: entity stage_2
+		port map (
+			clk => clk,
+			reset => reset,
+			
+			--Input from IF/ID
+			instr_in => IF_data_in,
+			
+			--Inputs from Writeback CHANGE	based on Stage 3/4
+			wb_reg_write  => wb_reg_write,
+            wb_dest_addr  => wb_dest_addr,
+            wb_write_data => wb_write_data,
+			
+			-- Control Outputs
+            ctrl_write_en => s2_write_en,
+            ctrl_alu_op   => s2_alu_op,
+            ctrl_alu_src  => s2_alu_src,
+            ctrl_is_load  => s2_is_load,
+			
+			-- Data Outputs
+            rs1_data      => s2_rs1_data,
+            rs2_data      => s2_rs2_data,
+            rs3_data      => s2_rs3_data,
+            
+            -- Address/Immediate Outputs
+            rs1_addr_out  => s2_rs1_addr,
+            rs2_addr_out  => s2_rs2_addr,
+            rs3_addr_out  => s2_rs3_addr,
+            rd_addr_out   => s2_rd_addr,
+            imm_out       => s2_imm,
+            ld_idx_out    => s2_ld_idx
+		);
+		
+	----------------
+	--PIPELINE ID/EX
+	----------------
+	
+	RegIDEX: entity IDEX
+		port map (
+			clk => clk,
+			reset => reset,
+			
+			--Control inputs from Stage 2
+			write_enable_in  => s2_write_en,
+            ALU_op_in        => s2_alu_op,
+            ALU_source_in    => s2_alu_src,
+            is_load_in       => s2_is_load,
+            
+            -- Register Address Inputs from Stage 2
+            rs1_in           => s2_rs1_addr,
+            rs2_in           => s2_rs2_addr,
+            rs3_in           => s2_rs3_addr,
+            rd_in            => s2_rd_addr,
+            
+            -- Data Inputs from Stage 2
+            rs1_d_in         => s2_rs1_data,
+            rs2_d_in         => s2_rs2_data,
+            rs3_d_in         => s2_rs3_data,
+            
+            -- Immediate Inputs from Stage 2
+            imm_in           => s2_imm,
+            ind_in           => s2_ld_idx, 
+			
+			--Complete based on Stage 3/4
+			LI_SA_HL_in => 
+			opcode_in =>  
+			
+			--Change based on Stage 3
+			write_enable_out => 
+            ALU_op_out       => 
+            ALU_source_out   => 
+            is_load_out      => 
+            rs1_out          => 
+            rs2_out          => 
+            rs3_out          => 
+            rs1_d_out        => 
+            rs2_d_out        => 
+            rs3_d_out        => 
+            rd_out           => 
+            imm_out          => 
+            ind_out          => 
+            LI_SA_HL_out     => 
+            opcode_out       => 
+		);
+		
+		--Outputs for results file creation
+		res_PC <= s1_pc_out;
+		res_Instruction <= 	 IF_data_in;
+		res_ALU_Result  <= 
+	    res_WB_Data     <= 
+	    res_RegWrite    <= 
+	    res_Forward
+		
+	Stage_ALU: entity stage_3
+		port map (
+		
+		
+		
+		
+		
+		
+		);
+		
+	RegEXWB: entity EXWB
+		port map (
+		
+		
+		
+		
+		
+		);
+		
 end structural;

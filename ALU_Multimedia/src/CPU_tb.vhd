@@ -21,15 +21,7 @@
 --{{ Section below this comment is automatically maintained
 --    and may be overwritten
 --{entity {CPU_tb} architecture {behavioral}} 
-library IEEE;
-use IEEE.std_logic_1164.all;
 
--- 1. DEFINE THE PACKAGE RIGHT HERE
-package CPU_Defs is
-    type REG_FILE_ARRAY_TYPE is array (0 to 31) of std_logic_vector(127 downto 0);
-end package CPU_Defs;
-
-use work.CPU_Defs.all;	--PUT THESE IN CPU.vhd
 
 library IEEE;
 use IEEE.std_logic_1164.all;
