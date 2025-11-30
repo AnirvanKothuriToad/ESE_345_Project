@@ -43,7 +43,7 @@ architecture behavioral of CPU_tb is
 	signal reset : std_logic := '0';
 	
 	--Loading signals
-	signal write_enable	: std_logic := '0';
+	signal write_enable	: std_logic;
 	signal load_addr : std_logic_vector(5 downto 0) := (others => '0');	 --Instruction buffer can store upto 64 instructions
 	signal load_data : std_logic_vector(24 downto 0) := (others => '0'); --25 bit machine code
 	
@@ -58,9 +58,7 @@ architecture behavioral of CPU_tb is
     signal res_ALU_Result  : std_logic_vector(127 downto 0);  -- Result from EXE stage
     
     -- Forwarding Control Signals 
-    signal res_Forward_A   : std_logic_vector(1 downto 0);    -- MUX control for rs1
-    signal res_Forward_B   : std_logic_vector(1 downto 0);    -- MUX control for rs2
-    signal res_Forward_C   : std_logic_vector(1 downto 0);    -- MUX control for rs3
+    signal res_forward    : std_logic;
     
     -- Write Back Stage Info
     signal res_WB_Data     : std_logic_vector(127 downto 0);  -- What is actually being written to RegFile
@@ -81,9 +79,7 @@ begin
 			res_PC          => res_PC,
             res_Instruction => res_Instruction,
             res_ALU_Result  => res_ALU_Result,
-            res_Forward_A   => res_Forward_A,
-            res_Forward_B   => res_Forward_B,
-            res_Forward_C   => res_Forward_C,
+            res_forward   => res_forward,
             res_WB_Data     => res_WB_Data,
             res_RegWrite    => res_RegWrite
 			);
@@ -112,40 +108,51 @@ begin
 	variable instr : std_logic_vector(24 downto 0); --binary format of instruction code
 	
 	variable exp_reg : std_logic_vector(127 downto 0); --Holds the 128 bit register value from expected.txt
-	
+	variable file_status : file_open_status; -- Status checker
 	variable i : integer := 0; --Counter variable to store number of instructions read
 	
 	begin
 		
 		report "1: Loading Instruction Buffer......";
 		
-		--Putting CPU in reset state when loading Instruction buffer
+		--Putting CPU in reset state before loading Instruction buffer
 		reset <= '1';
 		write_enable <= '1';
 		load_addr <= (others => '0');
+		wait for PER;
 		
-		file_open(progFile, "machine.txt", read_mode); --Opening machine.txt file made by assembler in read mode
+		file_open(file_status, progFile, "machine.txt", read_mode);
+		if file_status /= open_ok then
+		    report "ERROR: Could not open machine.txt. Check file location!" severity failure;
+		end if;
+		
 		i := 0; --Setting Counter to 0
 		
 		--Looping through file and loading to memory
 		while not endfile(progFile) loop
 			readline(progFile, instr_line);	  --Reading line and storing to instr_line
 			read(instr_line, instr);		  --Storing instr_line into instruction vector
+			 report "TB DEBUG: Loading Addr " & integer'image(i) & " with data " & to_string(instr);
 			
-			--Driving CPU Inputs
+			 --Driving CPU Inputs
+			
+		
+			write_enable <= '1';
 			load_addr <= std_logic_vector(to_unsigned(i,6)); --Converting i to a 6 bit vector to obtain address
 			load_data <= instr;
 			
-			wait for PER; --Allowing inputs to update 
+			wait until rising_edge(clk); --Allowing inputs to update
+			wait for 1 ns;
 			i := i+1; --moving to next address
 		end loop;
-		
+		file_close(progFile);
+
 		write_enable <= '0'; --Done writing to instruction buffer 
 		
 		
 		---PROGRAM EXECUTION
 		report "Running CPU";
-		
+		reset <= '1';
 		wait for PER*2;	 --Holding reset for 2 more cycles
 		reset <= '0'; --CPU can start fetching since reset is disabled
 		
@@ -195,7 +202,7 @@ begin
 			file_is_open := true;
 																																										 --Write Enable
 			--Header
-		    write(line_out, string'("Cycle |   PC   |        Instruction       | FwdA | FwdB | FwdC |            ALU Result            |          WriteBack Data          | WE"));
+		    write(line_out, string'("Cycle |   PC   |        Instruction       | FwdA |            ALU Result            |          WriteBack Data          | WE"));
             writeline(results_file, line_out);
             write(line_out, string'("-------------------------------------------------------------------------------------------------------------------------------------------------"));
             writeline(results_file, line_out);
@@ -217,12 +224,9 @@ begin
 				write(line_out, string'(" | "));
 				
 				--C4: Forwarding Unit for rs1
-				write(line_out, res_Forward_A);
+				write(line_out, res_forward);
 				write(line_out, string'(" | "));
-				write(line_out, res_Forward_B);
-				write(line_out, string'(" | "));
-				write(line_out, res_Forward_C);
-				write(line_out, string'(" | "));
+				
 				
 				--C5: ALU Result in Hexa
 				hwrite(line_out, res_ALU_Result);

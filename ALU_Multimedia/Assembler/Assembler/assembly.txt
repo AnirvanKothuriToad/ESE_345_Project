@@ -1,4 +1,8 @@
-li r1 15 0
-slimals r5 r2 r3 r4
-au r8 r6 r7
+li r1 10 0
+li r2 3 0
+li r3 4 0
+simals r4 r1 r2 r3
+slimals r5 r1 r2 r3
+au r6 r1 r2
+clzw r7 r1
 nop

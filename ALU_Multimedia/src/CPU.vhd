@@ -107,48 +107,84 @@ entity InstrBuffer is
 end InstrBuffer;
 
 --}} End of automatically maintained section
-
 architecture behavioral of InstrBuffer is  
 
-type INSTR_BUFFER_TYPE is array(0 to 63) of STD_LOGIC_VECTOR(24 downto 0);	-- Create type of 64 25-bit registers 
-
-signal INSTR_BUFFER : INSTR_BUFFER_TYPE := (others => (others => '0'));	-- Create actual signal using type and clear all registers
+    -- 1. Rename to MEM_ARRAY to ensure no namespace conflicts
+    type MEM_TYPE is array(0 to 63) of STD_LOGIC_VECTOR(24 downto 0); 
+    signal MEM_ARRAY : MEM_TYPE := (others => (others => '0')); 
 
 begin
 
-	process (reset, clk) is	-- Only operating on rising clock edges unless reset is asserted
-	
-	begin
-		if (reset = '1') then	-- Asynchronous reset, does not rely on clk
-			
-			-- Clear instruction buffer and set all outputs to 0
-			
-			INSTR_BUFFER <= (others => (others => '0'));
-			data_out <= (others => '0');
-			
-			
-		else  -- reset not asserted, function normally
-			
-			if rising_edge(clk) then 	-- Update on every positive edge of clk 
-				
-				-- Read value pointed to by PC (connected to address input)
-				
-				data_out <= INSTR_BUFFER(TO_INTEGER(UNSIGNED(PC_in)));
-			
-				if (write_enable = '1')	then -- Write is enabled, write to pointed-to register
-					
-					INSTR_BUFFER(TO_INTEGER(UNSIGNED(PC_in))) <= data_in;
-					
-					
-				end if;
-				
-			end if;
-			
-		end if;	
-					
-	end process;
+    -- --------------------------------------------------------
+    -- 1. SAFE ASYNCHRONOUS READ
+    -- --------------------------------------------------------
+    process(PC_in, MEM_ARRAY)
+    begin
+		data_out <= (others => '1');
+        -- If PC is "Unknown" (XX) or "Uninitialized" (UU), output 0.
+        -- This prevents the "metavalue detected" error at Time 0.
+        if (is_x(PC_in)) then
+            data_out <= (others => '0'); 
+        else
+            data_out <= MEM_ARRAY(TO_INTEGER(UNSIGNED(PC_in)));
+        end if;
+    end process;
+
+    -- --------------------------------------------------------
+    -- 2. SYNCHRONOUS WRITE 
+    -- --------------------------------------------------------
+    process (clk) is 
+    begin
+        if rising_edge(clk) then  
+            if (write_enable = '1') then 
+                -- DEBUG: This will print to console every time a write happens.
+                -- If you don't see this in the Transcript, the write isn't happening!
+                report "RAM WRITE: Addr=" & integer'image(TO_INTEGER(UNSIGNED(PC_in))) & " Data=" & to_hstring(data_in);
+                
+                MEM_ARRAY(TO_INTEGER(UNSIGNED(PC_in))) <= data_in;
+            end if;
+        end if; 
+    end process;
 
 end behavioral;
+--architecture behavioral of InstrBuffer is  
+--
+--type INSTR_BUFFER_TYPE is array(0 to 63) of STD_LOGIC_VECTOR(24 downto 0);	-- Create type of 64 25-bit registers 
+--
+--signal INSTR_BUFFER : INSTR_BUFFER_TYPE := (others => (others => '0'));	-- Create actual signal using type and clear all registers
+--
+--begin
+--	data_out <= INSTR_BUFFER(TO_INTEGER(UNSIGNED(PC_in)));	
+--	
+--	process (clk) is	-- Only operating on rising clock edges unless reset is asserted
+--	
+--	begin
+--		--if (reset = '1') then	-- Asynchronous reset, does not rely on clk
+--			
+--			-- Clear instruction buffer and set all outputs to 0
+--			
+--			--INSTR_BUFFER <= (others => (others => '0'));
+--			--data_out <= (others => '0');
+--		
+--			
+--		if rising_edge(clk) then  -- reset not asserted, function normally  --CHNAGE BACK TO eslif
+--				
+--				-- Read value pointed to by PC (connected to address input)
+--				
+--				--data_out <= INSTR_BUFFER(TO_INTEGER(UNSIGNED(PC_in)));
+--			
+--				if (write_enable = '1')	then -- Write is enabled, write to pointed-to register
+--					
+--					INSTR_BUFFER(TO_INTEGER(UNSIGNED(PC_in))) <= data_in;
+--					
+--					
+--				end if;
+--				
+--			end if;
+--					
+--	end process;
+--
+--end behavioral;
 
 --------------------------------
 --Structural Unit for Stage 1---
@@ -440,6 +476,7 @@ end behavioral;
 library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all;
+use work.CPU_Defs.all;
 use work.all;
 
 entity RegFile is
@@ -458,7 +495,9 @@ entity RegFile is
 		
 		
 		address_in : in STD_LOGIC_VECTOR(4 downto 0); 	   -- Register to write to
-		data_in : in STD_LOGIC_VECTOR(127 downto 0)		   -- Value to write to register
+		data_in : in STD_LOGIC_VECTOR(127 downto 0);		   -- Value to write to register
+		
+		reg_file_full : out REG_FILE_ARRAY_TYPE
 		
 	);
 end RegFile;
@@ -469,10 +508,10 @@ architecture behavioral of RegFile is
 
 type REG_FILE_TYPE is array(0 to 31) of STD_LOGIC_VECTOR(127 downto 0);	-- Create type of 32 128-bit registers 
 
-signal REG_FILE : REG_FILE_TYPE := (others => (others => '0'));	-- Create actual signal using type and clear all registers
+signal REG_FILE : REG_FILE_ARRAY_TYPE := (others => (others => '0'));	-- Create actual signal using type and clear all registers
 
 begin
-
+	reg_file_full <= REG_FILE;
 	process (reset, clk) is	-- Only operating on rising clock edges unless reset is asserted
 	
 	begin
@@ -528,6 +567,7 @@ end behavioral;
 library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all;
+use work.CPU_Defs.all;
 use work.all;
 
 entity stage_2 is 
@@ -561,7 +601,9 @@ entity stage_2 is
     rs3_addr_out  : out std_logic_vector(4 downto 0);
     rd_addr_out   : out std_logic_vector(4 downto 0);
     imm_out       : out std_logic_vector(15 downto 0);
-    ld_idx_out    : out std_logic_vector(2 downto 0)
+    ld_idx_out    : out std_logic_vector(2 downto 0);
+	
+	reg_file_out : out REG_FILE_ARRAY_TYPE
 	);
 end stage_2;
 
@@ -617,7 +659,9 @@ begin
 			--Read Data outputs(Going to ID/EX)
 			data_out_A => rs1_data,
 			data_out_B => rs2_data,
-			data_out_C => rs3_data
+			data_out_C => rs3_data,	
+			
+			reg_file_full => reg_file_out
 		); 
 	
 	--Send data to ID/EX (Needed in Forwarding)
@@ -1865,7 +1909,9 @@ entity writeback is
 	
 	-- Write registers from EX stage
 	rd : in STD_LOGIC_VECTOR(4 downto 0);  		-- rd number
-	rd_d : in STD_LOGIC_VECTOR(127 downto 0)	-- rd data	
+	rd_d : in STD_LOGIC_VECTOR(127 downto 0);	-- rd data	
+	
+	forward : out STD_LOGIC
 		
 	);
 end writeback;
@@ -1874,8 +1920,6 @@ end writeback;
 
 architecture structural of writeback is  
 
-
-signal forward : STD_LOGIC;
 
 begin 
 	
@@ -2028,7 +2072,8 @@ architecture structural of CPU is
     signal s2_rd_addr      : std_logic_vector(4 downto 0);
     signal s2_imm          : std_logic_vector(15 downto 0);
     signal s2_ld_idx       : std_logic_vector(2 downto 0);
-		
+	
+	signal res_s2_reg_file : REG_FILE_ARRAY_TYPE;
 	------------------------------	
 	--Local Signals for ID/EX
 	------------------------------
@@ -2178,7 +2223,9 @@ begin
             rs3_addr_out  => s2_rs3_addr,
             rd_addr_out   => s2_rd_addr,
             imm_out       => s2_imm,
-            ld_idx_out    => s2_ld_idx
+            ld_idx_out    => s2_ld_idx,
+			
+			reg_file_out => res_s2_reg_file
 		);
 		
 	----------------
@@ -2246,6 +2293,9 @@ begin
 			ind => ie_ld_idx
 		);
 		
+	EX_rd_in <= s3_rd_addr;
+	EX_rd_d_in <= s3_alu_result;
+		
 	RegEXWB: entity EXWB
 		port map (
 			reset 	=> reset,
@@ -2261,18 +2311,20 @@ begin
 		
 	Stage_WB: entity writeback
 		port map ( 
-			write_enable	=> WB_write_enable,
+			write_enable	=> ew_write_en,
                    
-			rs1    			=> WB_rs1,	
-			rs2    			=> WB_rs2,
-			rs3    	   		=> WB_rs3,	
+			rs1    			=> ie_rs1_addr,	
+			rs2    			=> ie_rs2_addr,
+			rs3    	   		=> ie_rs3_addr,	
 			        
-			rs1_d  			=> WB_rs1_d,
-			rs2_d  			=> WB_rs2_d,
-			rs3_d  			=> WB_rs3_d,
+			rs1_d  			=> forward_rs1_d,
+			rs2_d  			=> forward_rs2_d,
+			rs3_d  			=> forward_rs3_d,
 			         
-			rd     			=> WB_rd, 
-			rd_d			=> WB_rd_d 
+			rd     			=> ew_rd_addr, 
+			rd_d			=> ew_alu_result, 
+			
+			forward => forward_ctrl_sig
 	
 		);
 		
@@ -2282,7 +2334,9 @@ begin
 		res_ALU_Result  <= 	 s3_alu_result;
 	    res_WB_Data     <= 	 ew_alu_result;
 	    res_RegWrite    <= 	 ew_write_en;
-	    res_Forward	    <=   forward_ctrl_sig;
+	    res_Forward	    <=   forward_ctrl_sig; 
+		
+		reg_file_contents <= res_s2_reg_file;
 		
 		
 end structural;
