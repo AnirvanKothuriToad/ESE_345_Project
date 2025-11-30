@@ -921,17 +921,24 @@ entity execute is
 	
 	ALU_op : in STD_LOGIC_VECTOR(4 downto 0);	-- ALU operation (pass to ALU)
 	ALU_source : in STD_LOGIC;					-- ALU source (use in if statement to pass correct value into ALU)
-	is_load : in STD_LOGIC;						-- is_load (use in if statement to pass correct value into ALU)
+	is_load : in STD_LOGIC;						-- is_load (use in if statement to pass correct value into ALU)	 
+		
+	forward : in STD_LOGIC;						-- forward control signal (comes from forwarding unit in WB stage)
 	
 	-- Read register numbers
 	rs1 : in STD_LOGIC_VECTOR(4 downto 0);
 	rs2 : in STD_LOGIC_VECTOR(4 downto 0);
-	rs3 : in STD_LOGIC_VECTOR(4 downto 0);
+	rs3 : in STD_LOGIC_VECTOR(4 downto 0);	 
 	
-	-- Read register data
+	-- Read register data (not forwarded)
 	rs1_d : in STD_LOGIC_VECTOR(127 downto 0);	
 	rs2_d : in STD_LOGIC_VECTOR(127 downto 0);
 	rs3_d : in STD_LOGIC_VECTOR(127 downto 0);	
+	
+	-- Read register data (forwarded)
+	rs1_df : in STD_LOGIC_VECTOR(127 downto 0);	
+	rs2_df : in STD_LOGIC_VECTOR(127 downto 0);
+	rs3_df : in STD_LOGIC_VECTOR(127 downto 0);
 	
 	-- Write register number
 	rd_in : in STD_LOGIC_VECTOR(4 downto 0);   	
@@ -967,10 +974,23 @@ begin
 			rs1_mux(18 downto 16) <= ind;
 			rs1_mux(127 downto 19) <= (others => '-');	-- Set rest as don't cares
 			
-			rs2_mux <= rs2_d;	-- rs2_d should be same as rd
+			if forward = '1' then 
+				rs2_mux <= rs2_df;	-- rs2_d should be same as rd
+				
+			else 
+				rs2_mux <= rs2_d; 
+				
+			end if;
 		
-		elsif ALU_source = '1' then
-			rs1_mux <= rs1_d;
+		elsif ALU_source = '1' then	
+			
+			if forward = '1' then
+				rs1_mux <= rs1_df;
+			
+			else
+				rs1_mux <= rs1_d;
+			
+			end if;
 			
 			rs2_mux(4 downto 0) <= rs2;	-- rs2 has the same value as the immediate field from original instruction 
 			
@@ -994,3 +1014,4 @@ begin
 	write_enable_out <= write_enable_in;
 	
 end structural;
+
