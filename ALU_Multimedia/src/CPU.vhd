@@ -2066,13 +2066,6 @@ begin
             opcode_out       => 
 		);
 		
-		--Outputs for results file creation
-		res_PC <= s1_pc_out;
-		res_Instruction <= 	 IF_data_in;
-		res_ALU_Result  <= 
-	    res_WB_Data     <= 
-	    res_RegWrite    <= 
-	    res_Forward
 		
 	Stage_ALU: entity stage_3
 		port map (
@@ -2091,6 +2084,15 @@ begin
 		
 		
 		
-		);
+		); 
+		
+		--Outputs for results file creation
+		res_PC <= s1_pc_out;
+		res_Instruction <= 	 IF_data_in;
+		res_ALU_Result  <= 
+	    res_WB_Data     <= 
+	    res_RegWrite    <= 
+	    res_Forward
+		
 		
 end structural;
