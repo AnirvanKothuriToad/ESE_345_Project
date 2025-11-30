@@ -107,46 +107,96 @@ entity InstrBuffer is
 end InstrBuffer;
 
 --}} End of automatically maintained section
-architecture behavioral of InstrBuffer is  
-
-    -- 1. Rename to MEM_ARRAY to ensure no namespace conflicts
+architecture behavioral_ultimate_fix of InstrBuffer is  
     type MEM_TYPE is array(0 to 63) of STD_LOGIC_VECTOR(24 downto 0); 
-    signal MEM_ARRAY : MEM_TYPE := (others => (others => '0')); 
+    
+    -- Initialization Function (Must be kept)
+    impure function InitMem return MEM_TYPE is
+        variable temp_mem : MEM_TYPE;
+    begin
+        for i in 0 to 63 loop
+            temp_mem(i) := (others => '0');
+        end loop;
+        return temp_mem;
+    end function;
 
+    signal MEM_ARRAY : MEM_TYPE := InitMem; 
+    
+    -- NEW: Internal signal to hold the resolved instruction output
+    signal MEM_READ_OUT : STD_LOGIC_VECTOR(24 downto 0);
+    
 begin
 
-    -- --------------------------------------------------------
-    -- 1. SAFE ASYNCHRONOUS READ
-    -- --------------------------------------------------------
+    -- 1. COMBINATORIAL READ (The actual memory lookup)
+    -- This process determines the value and drives the internal signal.
     process(PC_in, MEM_ARRAY)
     begin
-		
-        -- If PC is "Unknown" (XX) or "Uninitialized" (UU), output 0.
-        -- This prevents the "metavalue detected" error at Time 0.
         if (is_x(PC_in)) then
-            data_out <= (others => '0'); 
+            MEM_READ_OUT <= (others => '0'); 
         else
-            data_out <= MEM_ARRAY(TO_INTEGER(UNSIGNED(PC_in)));
+            MEM_READ_OUT <= MEM_ARRAY(TO_INTEGER(UNSIGNED(PC_in)));
         end if;
     end process;
 
-    -- --------------------------------------------------------
-    -- 2. SYNCHRONOUS WRITE 
-    -- --------------------------------------------------------
+    -- 2. UNCONDITIONAL PORT ASSIGNMENT (Structural Fix)
+    -- This assigns the clean, internal signal to the output port.
+    data_out <= MEM_READ_OUT;
+
+    -- 3. SYNCHRONOUS WRITE 
     process (clk) is 
     begin
         if rising_edge(clk) then  
             if (write_enable = '1') then 
-                -- DEBUG: This will print to console every time a write happens.
-                -- If you don't see this in the Transcript, the write isn't happening!
                 report "RAM WRITE: Addr=" & integer'image(TO_INTEGER(UNSIGNED(PC_in))) & " Data=" & to_hstring(data_in);
-                
                 MEM_ARRAY(TO_INTEGER(UNSIGNED(PC_in))) <= data_in;
             end if;
         end if; 
     end process;
-
-end behavioral;
+    
+end behavioral_ultimate_fix;
+--architecture behavioral of InstrBuffer is  
+--
+--    -- 1. Rename to MEM_ARRAY to ensure no namespace conflicts
+--    type MEM_TYPE is array(0 to 63) of STD_LOGIC_VECTOR(24 downto 0); 
+--    signal MEM_ARRAY : MEM_TYPE := (others => (others => '0')); 
+--
+--begin
+--
+--    -- --------------------------------------------------------
+--    -- 1. SAFE ASYNCHRONOUS READ
+--    -- --------------------------------------------------------
+--    process(PC_in, MEM_ARRAY)
+--    begin
+--		
+--        -- If PC is "Unknown" (XX) or "Uninitialized" (UU), output 0.
+--        -- This prevents the "metavalue detected" error at Time 0.
+--        if (is_x(PC_in)) then
+--            data_out <= (others => '0'); 
+--        else
+--            data_out <= MEM_ARRAY(TO_INTEGER(UNSIGNED(PC_in)));
+--        end if;
+--    end process;
+--
+--    -- --------------------------------------------------------
+--    -- 2. SYNCHRONOUS WRITE 
+--    -- --------------------------------------------------------
+--	process(clk, reset)
+--    begin
+--		--if(reset = '1') then
+--			--MEM_ARRAY <= (others => (others => '0'));
+--			
+--        if rising_edge(clk) then  
+--            if (write_enable = '1') then 
+--                -- DEBUG: This will print to console every time a write happens.
+--                -- If you don't see this in the Transcript, the write isn't happening!
+--                report "RAM WRITE: Addr=" & integer'image(TO_INTEGER(UNSIGNED(PC_in))) & " Data=" & to_hstring(data_in);
+--                
+--                MEM_ARRAY(TO_INTEGER(UNSIGNED(PC_in))) <= data_in;
+--            end if;
+--        end if; 
+--    end process;
+--
+--end behavioral;
 --architecture behavioral of InstrBuffer is  
 --
 --type INSTR_BUFFER_TYPE is array(0 to 63) of STD_LOGIC_VECTOR(24 downto 0);	-- Create type of 64 25-bit registers 
@@ -215,7 +265,9 @@ architecture structural of stage_1 is
 
 	signal current_pc : std_logic_vector(5 downto 0); --Internal PC Signal
 	
-	signal buffer_addr_in : std_logic_vector(5 downto 0); 
+	signal buffer_addr_in : std_logic_vector(5 downto 0);
+	
+	signal s1_instr_data : STD_LOGIC_VECTOR(24 downto 0);
 	
 begin
 	
@@ -230,15 +282,17 @@ begin
 		data_out => current_pc --connecting PC value to local signal
 		);
 	
-	u1: entity InstrBuffer
+	stagr_1: entity work.InstrBuffer
 		port map(
 		reset => reset,
 		clk => clk,
 		write_enable => load_en,
 		PC_in => buffer_addr_in,
 		data_in => load_data,
-		data_out => instr_out
+		data_out => s1_instr_data
 		);
+		
+		instr_out <= s1_instr_data;
 end structural;
 		
 --------End of Stage_1 Structural---------	

@@ -144,7 +144,7 @@ begin
 			wait until rising_edge(clk); --Allowing inputs to update
 			wait for 1 ns;
 			i := i+1; --moving to next address
-		end loop;
+		end loop;		  		
 		file_close(progFile);
 
 		write_enable <= '0'; --Done writing to instruction buffer 
@@ -152,6 +152,9 @@ begin
 		
 		---PROGRAM EXECUTION
 		report "Running CPU";
+		
+		wait for PER;
+		
 		reset <= '1';
 		wait for PER*2;	 --Holding reset for 2 more cycles
 		reset <= '0'; --CPU can start fetching since reset is disabled
