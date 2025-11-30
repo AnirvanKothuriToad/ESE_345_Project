@@ -171,6 +171,11 @@ begin
 		end loop;
 		
 		file_close(exp_file); 
+		report "===================================";
+        report "   SIMULATION COMPLETE ";
+        report "===================================";
+        
+        std.env.finish; -- Stop simulation
 	 end process;
 	 
 	 -----------------------------------------------
@@ -220,18 +225,18 @@ begin
 				write(line_out, string'(" | "));
 				
 				--C5: ALU Result in Hexa
-				write(line_out, res_ALU_Result);
+				hwrite(line_out, res_ALU_Result);
 				write(line_out, string'(" | "));
 				
 				--C6: Write Back Data in Hexa
-				write(line_out, res_WB_data);
+				hwrite(line_out, res_WB_data);
 				write(line_out, string'(" | "));
 				
 				--C7: Write Enable
-				if write_enable = '1' then
+				if res_RegWrite = '1' then
 					write(line_out, string'(" 1 "));
 				else
-					write(line_out, string'(" 1 "));
+					write(line_out, string'(" 0 "));
 				end if;
 				
 				--Save the Line to the results file
@@ -240,12 +245,6 @@ begin
 				cycle_count := cycle_count + 1;
 			end if;
 		end if;
-	
-		report "===================================";
-        report "   SIMULATION COMPLETE ";
-        report "===================================";
-        
-        std.env.finish; -- Stop simulation
         
     end process;
 
