@@ -120,7 +120,7 @@ begin
     -- --------------------------------------------------------
     process(PC_in, MEM_ARRAY)
     begin
-		data_out <= (others => '1');
+		
         -- If PC is "Unknown" (XX) or "Uninitialized" (UU), output 0.
         -- This prevents the "metavalue detected" error at Time 0.
         if (is_x(PC_in)) then
@@ -1957,6 +1957,9 @@ entity EXWB is
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
 		clk : in STD_LOGIC;							   		-- Clock signal	
 		
+		write_enable_in : in STD_LOGIC;
+        write_enable_out : out STD_LOGIC;
+		
 		-- Destination register number
 		rd_in : in STD_LOGIC_VECTOR(4 downto 0);		  		-- rd input
 		rd_out : out STD_LOGIC_VECTOR(4 downto 0);				-- rd output  
@@ -1982,7 +1985,7 @@ begin
 			
 			rd_out <= (others => '0'); 	 
 			rd_d_out <= (others => '0'); 
-			
+			write_enable_out <= '0';
 			
 		else  -- reset not asserted, function normally
 			
@@ -1990,7 +1993,7 @@ begin
 				
 				rd_out <= rd_in; 
 				rd_d_out <= rd_d_in;
-				
+				write_enable_out <= write_enable_in;
 				
 			end if;
 			
@@ -2103,6 +2106,7 @@ architecture structural of CPU is
         signal s3_alu_result   :  STD_LOGIC_VECTOR(127 downto 0); --Register value
 		signal s3_write_en : std_logic;
         
+		signal EX_we_in, EX_we_out : std_logic; -- Wires for the EX/WB Pipeline Register
 		
 	------------------------------	
 	--Local Signals for EX/WB
@@ -2202,7 +2206,7 @@ begin
 			instr_in => IF_data_in,
 			
 			--Inputs from Writeback CHANGE	based on Stage 3/4
-			wb_reg_write  => ew_write_en,
+			wb_reg_write  =>  EX_we_out,              --ew_write_en,
             wb_dest_addr  => ew_rd_addr,
             wb_write_data => ew_alu_result,
 			
@@ -2295,6 +2299,7 @@ begin
 		
 	EX_rd_in <= s3_rd_addr;
 	EX_rd_d_in <= s3_alu_result;
+	EX_we_in <= s3_write_en;
 		
 	RegEXWB: entity EXWB
 		port map (
@@ -2305,13 +2310,16 @@ begin
 			rd_out 		=> EX_rd_out,
 							      
 			rd_d_in 		=> EX_rd_d_in,
-			rd_d_out 	=> EX_rd_d_out 
+			rd_d_out 	=> EX_rd_d_out,
+			
+			write_enable_in => EX_we_in, 
+            write_enable_out => EX_we_out
 		
 		); 
 		
 	Stage_WB: entity writeback
 		port map ( 
-			write_enable	=> ew_write_en,
+			write_enable	=> EX_we_out,              --ew_write_en,
                    
 			rs1    			=> ie_rs1_addr,	
 			rs2    			=> ie_rs2_addr,
