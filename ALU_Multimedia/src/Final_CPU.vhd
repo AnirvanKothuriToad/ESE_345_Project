@@ -1350,7 +1350,9 @@ entity execute is
         ALU_op : in STD_LOGIC_VECTOR(4 downto 0);   
         ALU_source : in STD_LOGIC;                  
         is_load : in STD_LOGIC;                     
-        forward : in STD_LOGIC;                     
+        forward_1 : in STD_LOGIC;
+		forward_2 : in STD_LOGIC;   
+		forward_3 : in STD_LOGIC;   
         rs1 : in STD_LOGIC_VECTOR(4 downto 0);
         rs2 : in STD_LOGIC_VECTOR(4 downto 0);
         rs3 : in STD_LOGIC_VECTOR(4 downto 0);  
@@ -1368,25 +1370,25 @@ entity execute is
     );
 end execute;
 
-architecture structural of execute is  
-    signal rs1_mux : STD_LOGIC_VECTOR(127 downto 0); 
+architecture structural of execute isÂ Â 
+    signal rs1_mux : STD_LOGIC_VECTOR(127 downto 0);Â 
     signal rs2_mux : STD_LOGIC_VECTOR(127 downto 0);
-    -- rs3 never goes through a MUX (as established in your previous structural code)
+	signal rs2_mux : STD_LOGIC_VECTOR(127 downto 0);
 
-begin 
+beginÂ 
     
     process (all) is
     begin
-        -- FIX 1 (Defensive): Default both MUX outputs to zero at the start of the process.
+
         -- This eliminates any possibility of an 'X' or 'U' floating into the ALU.
-        rs1_mux <= (others => '0'); 
+        rs1_mux <= (others => '0');Â 
         rs2_mux <= (others => '0');
+		rs3_mux <= (others => '0');
         
         -- MUX LOGIC (Handles Operand Selection and Padding)
-        if is_load = '1' then 
+        if is_load = '1' thenÂ 
             -- Load Immediate (LI) processing: rs1_mux carries the new register value.
             
-            -- CRITICAL FIX 1: Use the original clean register data (rs1_d) as the base.
             -- This preserves all 128 bits that are NOT being overwritten by 'imm' or 'ind'.
             rs1_mux <= rs1_d; 
 
@@ -1394,31 +1396,43 @@ begin 
             rs1_mux(15 downto 0) <= imm;
             rs1_mux(18 downto 16) <= ind;
             
-            -- rs2_mux is the source/destination register (rd, read via rs2), handles forwarding.
-            if forward = '1' then 
+            if forward_2 = '1' thenÂ 
                 rs2_mux <= rs2_df;	
-            else 
-                rs2_mux <= rs2_d; 
+            elseÂ 
+                rs2_mux <= rs2_d;Â 
+            end if;
+
+			if forward_3 = '1' thenÂ 
+                rs3_mux <= rs3_df;	
+            elseÂ 
+                rs3_mux <= rs3_d;Â 
             end if;
         
-        elsif ALU_source = '1' then 
+        elsif ALU_source = '1' thenÂ 
             -- Immediate/Shift Instructions (SHRHI, MLHCU)
             
             -- rs1_mux handles forwarding for the main register source
-            if forward = '1' then 
-                rs1_mux <= rs1_df; 
-            else 
-                rs1_mux <= rs1_d; 
+            if forward_1 = '1' thenÂ 
+                rs1_mux <= rs1_df;Â 
+            elseÂ 
+                rs1_mux <= rs1_d;Â 
             end if;
             
             -- CRITICAL FIX 2: Zero-extend the 5-bit immediate input (rs2).
             -- rs2_mux is cleared to '0' at the start of the process, so we only need to drive the low bits.
             rs2_mux(4 downto 0) <= rs2(4 downto 0);
+
+			if forward_3 = '1' then
+				rs3_mux <= rs3_df;
+			else
+				rs3_mux <= rs3_d;
+			end if;
         
-        else 
+        elseÂ 
             -- Standard R-Type (rs1, rs2, rs3 are all registers)
-            rs1_mux <= rs1_d; 
-            rs2_mux <= rs2_d;
+            rs1_mux <= rs1_df when forward_1 = '1' else rs1_d;Â 
+            rs2_mux <= rs2_df when forward_2 = '1' else rs2_d;
+			rs3_mus <= rs3_df when forward_3 = '1' else rs3_d;
         
         end if;
         
@@ -1427,10 +1441,10 @@ begin 
     -- ALU instantiation (ALU process is fixed to output clean 0s)
     ALU : entity work.ALU(behavioral) port map (
         instr => ALU_op, rs1 => rs1_mux, rs2 => rs2_mux, rs3 => rs3_d, rd => rd_d
-    );  
+    );Â Â 
     
     -- Pipeline outputs
-    rd_out <= rd_in; 
+    rd_out <= rd_in;Â 
     write_enable_out <= write_enable_in;
 end structural;
 
@@ -1452,18 +1466,33 @@ entity forwarding is
         rs2_d : out STD_LOGIC_VECTOR(127 downto 0);         
         rs3_d : out STD_LOGIC_VECTOR(127 downto 0);         
         rd_d : in STD_LOGIC_VECTOR(127 downto 0);           
-        forward : out STD_LOGIC                             
+        forward_1 : out STD_LOGIC; 
+		forward_2 : out STD_LOGIC;
+		forward_3 : out STD_LOGIC
     );
 end forwarding;
 
 architecture behavioral of forwarding is  
 begin
     process(rs1, rs2, rs3, rd, rd_d) is 
-    begin       
+    begin 
+
         if rd = rs1 then    
-            forward <= '1'; rs1_d <= rd_d; rs2_d <= (others => '-'); rs3_d <= (others => '-');
+            forward_1 <= '1';
+			forward_2 <= '0';
+			forward_3 <= '0';
+			rs1_d <= rd_d; 
+			rs2_d <= (others => '-'); 
+			rs3_d <= (others => '-');
+
         elsif rd = rs2 then
-            forward <= '1'; rs1_d <= (others => '-'); rs2_d <= rd_d; rs3_d <= (others => '-');
+            forward_1 <= '0';
+			forward_2 <= '1';
+			forward_3 <= '0';
+			rs1_d <= (others => '-'); 
+			rs2_d <= rd_d; 
+			rs3_d <= (others => '-');
+
         elsif rd = rs3 then 
             forward <= '1'; rs1_d <= (others => '-'); rs2_d <= (others => '-'); rs3_d <= rd_d;
         else 
