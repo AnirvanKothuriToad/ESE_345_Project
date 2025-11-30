@@ -1494,9 +1494,19 @@ begin
 			rs3_d <= (others => '-');
 
         elsif rd = rs3 then 
-            forward <= '1'; rs1_d <= (others => '-'); rs2_d <= (others => '-'); rs3_d <= rd_d;
+            forward_1 <= '0';
+			forward_2 <= '0';
+			forward_3 <= '1';
+			rs1_d <= (others => '-'); 
+			rs2_d <= (others => '-');
+			rs3_d <= rd_d;
         else 
-            forward <= '0'; rs1_d <= (others => '-'); rs2_d <= (others => '-'); rs3_d <= (others => '-');
+            forward_1 <= '0';
+			forward_2 <= '0';
+			forward_3 <= '0';
+			rs1_d <= (others => '-'); 
+			rs2_d <= (others => '-');
+			rs3_d <= (others => '-');
         end if;
     end process;
 end behavioral;
@@ -1520,7 +1530,9 @@ entity writeback is
         rs3_d : out STD_LOGIC_VECTOR(127 downto 0);
         rd : in STD_LOGIC_VECTOR(4 downto 0);       
         rd_d : in STD_LOGIC_VECTOR(127 downto 0);   
-        forward : out STD_LOGIC
+        forward_1 : out STD_LOGIC;
+		forward_2 : out STD_LOGIC;
+		forward_3 : out STD_LOGIC
     );
 end writeback;
 
@@ -1529,7 +1541,8 @@ begin
     fw : entity work.forwarding(behavioral) port map (
         rs1 => rs1, rs2 => rs2, rs3 => rs3,
         rs1_d => rs1_d, rs2_d => rs2_d, rs3_d => rs3_d,
-        rd => rd, rd_d => rd_d, forward => forward
+        rd => rd, rd_d => rd_d, forward_1 => forward_1,
+		forward_2 => forward_2, forward_3 => forward_3,
     );      
 end structural;
     
@@ -1592,7 +1605,9 @@ entity CPU is
         res_PC : out std_logic_vector(5 downto 0);
         res_Instruction : out std_logic_vector(24 downto 0);
         res_ALU_Result  : out std_logic_vector(127 downto 0);
-        res_Forward     : out std_logic;
+        res_Forward_1     : out std_logic;
+		res_Forward_2     : out std_logic;
+		res_Forward_3     : out std_logic;
         res_WB_Data     : out std_logic_vector(127 downto 0);
         res_RegWrite    : out std_logic
     );
@@ -1628,7 +1643,7 @@ architecture structural of CPU is
     signal EX_we_in, EX_we_out : std_logic; 
 
     signal forward_rs1_d, forward_rs2_d, forward_rs3_d : STD_LOGIC_VECTOR(127 downto 0);
-    signal forward_ctrl_sig : STD_LOGIC;
+    signal forward_1_ctrl_sig, forward_2_ctrl_sig, forward_3_ctrl_sig : STD_LOGIC;
 
 begin
     ------------
@@ -1684,7 +1699,7 @@ begin
         port map (
             write_enable_in => ie_write_en, write_enable_out => s3_write_en,
             ALU_op => ie_alu_op, ALU_source => ie_alu_src, is_load => ie_is_load,
-            forward => forward_ctrl_sig,
+            forward_1 => forward_1_ctrl_sig, forward_2 => forward_2_ctrl_sig, forward_3 => forward_3_ctrl_sig,
             rs1 => ie_rs1_addr, rs2 => ie_rs2_addr, rs3 => ie_rs3_addr,
             rs1_d => ie_rs1_data, rs2_d => ie_rs2_data, rs3_d => ie_rs3_data,
             rs1_df => forward_rs1_d, rs2_df => forward_rs2_d, rs3_df => forward_rs3_d,
@@ -1714,7 +1729,7 @@ begin
             rs1 => ie_rs1_addr, rs2 => ie_rs2_addr, rs3 => ie_rs3_addr, 
             rs1_d => forward_rs1_d, rs2_d => forward_rs2_d, rs3_d => forward_rs3_d,
             rd => EX_rd_out, rd_d => EX_rd_d_out,
-            forward => forward_ctrl_sig
+            forward_1 => forward_1_ctrl_sig, forward_2 => forward_2_ctrl_sig,, forward_3 => forward_3_ctrl_sig,
         );
         
     -- Outputs
