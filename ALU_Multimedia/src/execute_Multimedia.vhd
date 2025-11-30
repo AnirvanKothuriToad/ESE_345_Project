@@ -916,7 +916,9 @@ entity execute is
 	port(	
 	
 	-- Control signals
-	write_enable : in STD_LOGIC;				-- write enable (pass to EXWB register)
+	write_enable_in : in STD_LOGIC;				-- write enable (pass to EXWB register)
+	write_enable_out : out STD_LOGIC;
+	
 	ALU_op : in STD_LOGIC_VECTOR(4 downto 0);	-- ALU operation (pass to ALU)
 	ALU_source : in STD_LOGIC;					-- ALU source (use in if statement to pass correct value into ALU)
 	is_load : in STD_LOGIC;						-- is_load (use in if statement to pass correct value into ALU)
@@ -988,6 +990,7 @@ begin
 		rd => rd_d
 	);	
 	
-	rd_out <= rd_in;	-- Passes through this stage to write-back stage
+	rd_out <= rd_in;	-- Passes through this stage to write-back stage 
+	write_enable_out <= write_enable_in;
 	
 end structural;
