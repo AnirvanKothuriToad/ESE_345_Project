@@ -31,7 +31,7 @@ entity PC is
 	port(	
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
 		clk : in STD_LOGIC;							   		-- Clock signal	 
-		data_out : out STD_LOGIC_VECTOR(6 downto 0)	   		-- PC output
+		data_out : out STD_LOGIC_VECTOR(5 downto 0)	   		-- PC output
 													
 	);
 end PC;

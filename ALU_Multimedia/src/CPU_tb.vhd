@@ -73,10 +73,10 @@ begin
 		port map (
 			clk => clk,
 			reset => reset,	
-			write_enable => write_enable,
+			load_en => write_enable,
 			load_addr => load_addr,
 			load_data => load_data,
-			cpu_reg_file => cpu_reg_file,
+			reg_file_contents => cpu_reg_file,
 			
 			res_PC          => res_PC,
             res_Instruction => res_Instruction,

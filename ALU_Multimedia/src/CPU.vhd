@@ -36,6 +36,10 @@ package CPU_Defs is
     type REG_FILE_ARRAY_TYPE is array (0 to 31) of std_logic_vector(127 downto 0);
 end package CPU_Defs;
 
+library IEEE;
+use IEEE.std_logic_1164.all; 
+use IEEE.numeric_std.all;
+use work.all;
 use work.CPU_Defs.all;
 
 
@@ -1794,6 +1798,7 @@ end behavioral;
 library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
+use work.CPU_Defs.all;
 use work.all;
 
 entity CPU is
@@ -1815,7 +1820,8 @@ entity CPU is
 			res_ALU_Result  : out std_logic_vector(127 downto 0);
         	res_Forward   	: out std_logic;
         	res_WB_Data     : out std_logic_vector(127 downto 0);
-        	res_RegWrite    : out std_logic;
+        	res_RegWrite    : out std_logic
+		);
 end CPU;
 
 --}} End of automatically maintained section
