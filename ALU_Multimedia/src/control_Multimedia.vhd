@@ -60,7 +60,7 @@ begin
 			ALU_op <= (others => '0'); -- ALU operation for load immediate
 			write_enable <= '1';	-- Will be writing to rd
 			is_load <= '1'; 		-- Need to tell MUXs to switch
-		
+		    ALU_source <= '0';
 		---------------------------------------------	
 		elsif instr(23) = '0' then	-- R4 Instruction
 		---------------------------------------------
@@ -106,7 +106,7 @@ begin
 		
 			write_enable <= '1';	-- All instructions except NOP write back to reg file 
 			is_load <= '0';			-- Not load immediate instruction
-			ALU_source <= '0'		-- Only asserted on SHRHI and MLHCU
+			ALU_source <= '0';		-- Only asserted on SHRHI and MLHCU
 			
 			case instr(18 downto 15) is	-- Useful opcode, rest is don't cares
 				
