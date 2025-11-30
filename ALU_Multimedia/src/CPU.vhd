@@ -2274,10 +2274,10 @@ begin
 		--Outputs for results file creation
 		res_PC <= s1_pc_out;
 		res_Instruction <= 	 IF_data_in;
-		res_ALU_Result  <= 
-	    res_WB_Data     <= 
-	    res_RegWrite    <= 
-	    res_Forward
+		res_ALU_Result  <= 	 s3_alu_result;
+	    res_WB_Data     <= 	 ew_alu_result;
+	    res_RegWrite    <= 	 ew_write_en;
+	    res_Forward	    <=   fwd_ctrl_sig;
 		
 		
 end structural;
