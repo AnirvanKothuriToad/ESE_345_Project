@@ -1370,23 +1370,23 @@ entity execute is
     );
 end execute;
 
-architecture structural of execute isÂ Â 
-    signal rs1_mux : STD_LOGIC_VECTOR(127 downto 0);Â 
+architecture structural of execute is  
+    signal rs1_mux : STD_LOGIC_VECTOR(127 downto 0); 
     signal rs2_mux : STD_LOGIC_VECTOR(127 downto 0);
-	signal rs2_mux : STD_LOGIC_VECTOR(127 downto 0);
+	signal rs3_mux : STD_LOGIC_VECTOR(127 downto 0);
 
-beginÂ 
+begin 
     
     process (all) is
     begin
 
         -- This eliminates any possibility of an 'X' or 'U' floating into the ALU.
-        rs1_mux <= (others => '0');Â 
+        rs1_mux <= (others => '0'); 
         rs2_mux <= (others => '0');
 		rs3_mux <= (others => '0');
         
         -- MUX LOGIC (Handles Operand Selection and Padding)
-        if is_load = '1' thenÂ 
+        if is_load = '1' then 
             -- Load Immediate (LI) processing: rs1_mux carries the new register value.
             
             -- This preserves all 128 bits that are NOT being overwritten by 'imm' or 'ind'.
@@ -1396,26 +1396,26 @@ beginÂ 
             rs1_mux(15 downto 0) <= imm;
             rs1_mux(18 downto 16) <= ind;
             
-            if forward_2 = '1' thenÂ 
+            if forward_2 = '1' then 
                 rs2_mux <= rs2_df;	
-            elseÂ 
-                rs2_mux <= rs2_d;Â 
+            else 
+                rs2_mux <= rs2_d; 
             end if;
 
-			if forward_3 = '1' thenÂ 
+			if forward_3 = '1' then 
                 rs3_mux <= rs3_df;	
-            elseÂ 
-                rs3_mux <= rs3_d;Â 
+            else 
+                rs3_mux <= rs3_d; 
             end if;
         
-        elsif ALU_source = '1' thenÂ 
+        elsif ALU_source = '1' then 
             -- Immediate/Shift Instructions (SHRHI, MLHCU)
             
             -- rs1_mux handles forwarding for the main register source
-            if forward_1 = '1' thenÂ 
-                rs1_mux <= rs1_df;Â 
-            elseÂ 
-                rs1_mux <= rs1_d;Â 
+            if forward_1 = '1' then 
+                rs1_mux <= rs1_df; 
+            else 
+                rs1_mux <= rs1_d; 
             end if;
             
             -- CRITICAL FIX 2: Zero-extend the 5-bit immediate input (rs2).
@@ -1428,11 +1428,11 @@ beginÂ 
 				rs3_mux <= rs3_d;
 			end if;
         
-        elseÂ 
+        else 
             -- Standard R-Type (rs1, rs2, rs3 are all registers)
-            rs1_mux <= rs1_df when forward_1 = '1' else rs1_d;Â 
+            rs1_mux <= rs1_df when forward_1 = '1' else rs1_d; 
             rs2_mux <= rs2_df when forward_2 = '1' else rs2_d;
-			rs3_mus <= rs3_df when forward_3 = '1' else rs3_d;
+			rs3_mux <= rs3_df when forward_3 = '1' else rs3_d;
         
         end if;
         
@@ -1441,10 +1441,10 @@ beginÂ 
     -- ALU instantiation (ALU process is fixed to output clean 0s)
     ALU : entity work.ALU(behavioral) port map (
         instr => ALU_op, rs1 => rs1_mux, rs2 => rs2_mux, rs3 => rs3_d, rd => rd_d
-    );Â Â 
+    );  
     
     -- Pipeline outputs
-    rd_out <= rd_in;Â 
+    rd_out <= rd_in; 
     write_enable_out <= write_enable_in;
 end structural;
 
@@ -1542,7 +1542,7 @@ begin
         rs1 => rs1, rs2 => rs2, rs3 => rs3,
         rs1_d => rs1_d, rs2_d => rs2_d, rs3_d => rs3_d,
         rd => rd, rd_d => rd_d, forward_1 => forward_1,
-		forward_2 => forward_2, forward_3 => forward_3,
+		forward_2 => forward_2, forward_3 => forward_3
     );      
 end structural;
     
@@ -1729,7 +1729,7 @@ begin
             rs1 => ie_rs1_addr, rs2 => ie_rs2_addr, rs3 => ie_rs3_addr, 
             rs1_d => forward_rs1_d, rs2_d => forward_rs2_d, rs3_d => forward_rs3_d,
             rd => EX_rd_out, rd_d => EX_rd_d_out,
-            forward_1 => forward_1_ctrl_sig, forward_2 => forward_2_ctrl_sig,, forward_3 => forward_3_ctrl_sig,
+            forward_1 => forward_1_ctrl_sig, forward_2 => forward_2_ctrl_sig, forward_3 => forward_3_ctrl_sig
         );
         
     -- Outputs
@@ -1738,7 +1738,9 @@ begin
     res_ALU_Result  <= s3_alu_result;
     res_WB_Data     <= EX_rd_d_out; 
     res_RegWrite    <= EX_we_out; 
-    res_Forward     <= forward_ctrl_sig; 
+    res_Forward_1     <= forward_1_ctrl_sig; 
+	res_Forward_2     <= forward_2_ctrl_sig; 
+	res_Forward_3     <= forward_3_ctrl_sig; 
     reg_file_contents <= res_s2_reg_file;
         
 end structural;

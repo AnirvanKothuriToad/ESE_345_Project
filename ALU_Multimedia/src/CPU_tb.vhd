@@ -58,7 +58,9 @@ architecture behavioral of CPU_tb is
     signal res_ALU_Result  : std_logic_vector(127 downto 0);  -- Result from EXE stage
     
     -- Forwarding Control Signals 
-    signal res_forward    : std_logic;
+    signal res_forward_1    : std_logic;
+	signal res_forward_2    : std_logic;
+	signal res_forward_3    : std_logic;
     
     -- Write Back Stage Info
     signal res_WB_Data     : std_logic_vector(127 downto 0);  -- What is actually being written to RegFile
@@ -79,7 +81,9 @@ begin
 			res_PC          => res_PC,
             res_Instruction => res_Instruction,
             res_ALU_Result  => res_ALU_Result,
-            res_forward   => res_forward,
+            res_Forward_1   => res_forward_1,
+			res_Forward_2   => res_forward_2,
+			res_Forward_3   => res_forward_3,
             res_WB_Data     => res_WB_Data,
             res_RegWrite    => res_RegWrite
 			);
@@ -205,7 +209,7 @@ begin
 			file_is_open := true;
 																																										 --Write Enable
 			--Header
-		    write(line_out, string'("Cycle |   PC   |        Instruction       | FwdA |            ALU Result            |          WriteBack Data          | WE"));
+		    write(line_out, string'("Cycle |   PC   |        Instruction       | Fwd1  Fwd2  Fwd3 |            ALU Result            |          WriteBack Data          | WE"));
             writeline(results_file, line_out);
             write(line_out, string'("-------------------------------------------------------------------------------------------------------------------------------------------------"));
             writeline(results_file, line_out);
@@ -227,9 +231,13 @@ begin
 				write(line_out, string'(" | "));
 				
 				--C4: Forwarding Unit for rs1
-				write(line_out, res_forward);
+				write(line_out, res_forward_1);
+				write(line_out, string'("     ")); 
+				write(line_out, res_forward_2);
+				write(line_out, string'("      "));
+				write(line_out, res_forward_3);
+				write(line_out, string'("   "));
 				write(line_out, string'(" | "));
-				
 				
 				--C5: ALU Result in Hexa
 				hwrite(line_out, res_ALU_Result);
