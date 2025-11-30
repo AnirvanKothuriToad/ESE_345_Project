@@ -2089,6 +2089,26 @@ architecture structural of CPU is
 		signal forward_rd_d :  STD_LOGIC_VECTOR(127 downto 0);			-- rd_d input 
 		
 		signal forward :  STD_LOGIC;								-- Forwarding MUX control signal
+
+	-----------------------------------------
+	-- Local Signals for Stage 4 - Write-back
+	-----------------------------------------	 
+	
+		-- Control signals
+		signal WB_write_enable : in STD_LOGIC;				-- write enable
+	
+		-- Read registers passed from ID stage
+		signal WB_rs1 : STD_LOGIC_VECTOR(4 downto 0); 		-- rs number
+		signal WB_rs2 : STD_LOGIC_VECTOR(4 downto 0);
+		signal WB_rs3 : STD_LOGIC_VECTOR(4 downto 0);		 
+		
+		signal WB_rs1_d : STD_LOGIC_VECTOR(127 downto 0);	-- rs data
+		signal WB_rs2_d : STD_LOGIC_VECTOR(127 downto 0);
+		signal WB_rs3_d : STD_LOGIC_VECTOR(127 downto 0);
+		
+		-- Write registers from EX stage
+		signal WB_rd : STD_LOGIC_VECTOR(4 downto 0);  		-- rd number
+		signal WB_rd_d : STD_LOGIC_VECTOR(127 downto 0)		-- rd data	
 begin
    
 	------------
@@ -2223,12 +2243,33 @@ begin
 		
 	RegEXWB: entity EXWB
 		port map (
-		
-		
-		
-		
+			reset 	=> reset,
+			clk 	=> clk,
+			
+			EX_rd_in 		=> rd_in,
+			EX_rd_out 		=> rd_out,
+			
+			EX_rd_d_in 		=> rd_d_in,
+			EX_rd_d_out 	=> rd_d_out 
 		
 		); 
+		
+	Stage_WB: entity writeback
+		port map ( 
+			write_enable	=> WB_write_enable
+                   
+			rs1    			=> WB_rs1,	
+			rs2    			=> WB_rs2,
+			rs3    	   		=> WB_rs3,	
+			        
+			rs1_d  			=> WB_rs1_d,
+			rs2_d  			=> WB_rs2_d,
+			rs3_d  			=> WB_rs3_d,
+			         
+			rd     			=> WB_rd, 
+			rd_d			=> WB_rd_d 
+	
+		);
 		
 		--Outputs for results file creation
 		res_PC <= s1_pc_out;
