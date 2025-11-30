@@ -965,7 +965,7 @@ begin
 		if is_load = '1' then 
 			rs1_mux(15 downto 0) <= imm;
 			rs1_mux(18 downto 16) <= ind;
-			rs1_mux(127 downto 19) <= (others => '-')	-- Set rest as don't cares
+			rs1_mux(127 downto 19) <= (others => '-');	-- Set rest as don't cares
 			
 			rs2_mux <= rs2_d;	-- rs2_d should be same as rd
 		
