@@ -932,8 +932,11 @@ entity execute is
 	rs3_d : in STD_LOGIC_VECTOR(127 downto 0);	
 	
 	-- Write register number
-	rd_in : in STD_LOGIC_VECTOR(4 downto 0);
-	rd_out : out STD_LOGIC_VECTOR(4 downto 0);
+	rd_in : in STD_LOGIC_VECTOR(4 downto 0);   	
+	rd_out : out STD_LOGIC_VECTOR(4 downto 0);	
+	
+	-- Write register data
+	rd_d : out STD_LOGIC_VECTOR(127 downto 0);
 	
 	-- Load instruction values
 	imm : in STD_LOGIC_VECTOR(15 downto 0);
@@ -950,8 +953,6 @@ architecture structural of execute is
 signal rs1_mux : STD_LOGIC_VECTOR(127 downto 0); 
 signal rs2_mux : STD_LOGIC_VECTOR(127 downto 0);
 -- rs3 never goes through a MUX
-
-signal rd_d : STD_LOGIC_VECTOR(127 downto 0);
 
 begin 
 	
@@ -988,7 +989,4 @@ begin
 	
 	rd_out <= rd_in;	-- Passes through this stage to write-back stage
 	
-	
-
-
 end structural;
