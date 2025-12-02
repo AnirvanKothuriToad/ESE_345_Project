@@ -500,56 +500,87 @@ begin
 
     process(instr, rs3, rs2, rs1) is 
 	
-	-- Variables for Load immediate
-	  variable imm:  STD_LOGIC_VECTOR(15 downto 0) := (others => '0'); 
-	  variable ld_in: UNSIGNED(2 downto 0) := (others => '0');	
+	--Variables for Load immediate
+	  variable imm:  STD_LOGIC_VECTOR(15 downto 0); --Represents the immediate value
+	  variable ld_in: UNSIGNED(2 downto 0);	 --Index value 
 	
-	-- Variables for Signed Multiplty Add High, Low (INITIALIZED TO ZERO)
-			variable product_1st_hw : SIGNED(31 downto 0) := (others => '0'); 
-			variable product_2nd_hw : SIGNED(31 downto 0) := (others => '0');
-			variable product_3rd_hw : SIGNED(31 downto 0) := (others => '0');
-			variable product_4th_hw : SIGNED(31 downto 0) := (others => '0'); 	
-			variable sum_1st_w : SIGNED(31 downto 0) := (others => '0');  
-			variable sum_2nd_w : SIGNED(31 downto 0) := (others => '0');
-			variable sum_3rd_w : SIGNED(31 downto 0) := (others => '0');
-			variable sum_4th_w : SIGNED(31 downto 0) := (others => '0');	 
-			variable sum_1st_w_33 : SIGNED(32 downto 0) := (others => '0');
-			variable sum_2nd_w_33 : SIGNED(32 downto 0) := (others => '0');
-			variable sum_3rd_w_33 : SIGNED(32 downto 0) := (others => '0');
-			variable sum_4th_w_33 : SIGNED(32 downto 0) := (others => '0');
+	--Variables for Signed Multiplty Add High, Low 
+		
+		-- 16 bit variant:	 
+		
+			-- Variables of products (16-bit [half word] values to 32-bit product)
+			variable product_1st_hw : SIGNED(31 downto 0):= (others => '0'); 
+			variable product_2nd_hw : SIGNED(31 downto 0):=  (others => '0');
+			variable product_3rd_hw : SIGNED(31 downto 0):=  (others => '0');
+			variable product_4th_hw : SIGNED(31 downto 0):=  (others => '0'); 	
+			
+			-- Store 32-bit sum
+			variable sum_1st_w : SIGNED(31 downto 0):= (others => '0');  
+			variable sum_2nd_w : SIGNED(31 downto 0):=  (others => '0');
+			variable sum_3rd_w : SIGNED(31 downto 0):=  (others => '0');
+			variable sum_4th_w : SIGNED(31 downto 0):=  (others => '0');	 
+			
+			-- 33-bit variables to handle clipping
+			variable sum_1st_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable sum_2nd_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable sum_3rd_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable sum_4th_w_33 : SIGNED(32 downto 0):= (others => '0');
 	
-	        variable product_low  : SIGNED(63 downto 0) := (others => '0');
-	        variable product_high : SIGNED(63 downto 0) := (others => '0');
+		
+		-- 32 bit variant:
+	        --variable to store product of low 32 bits
+	        variable product_low  : SIGNED(63 downto 0):= (others => '0');
+	        --variable to store product of high 32 bits
+	        variable product_high : SIGNED(63 downto 0):= (others => '0');
 	
-	        variable sum_low      : SIGNED(63 downto 0) := (others => '0');
-	        variable sum_high     : SIGNED(63 downto 0) := (others => '0');
+	        --Variables to store 64 bit sum values
+	        variable sum_low      : SIGNED(63 downto 0):= (others => '0');
+	        variable sum_high     : SIGNED(63 downto 0):= (others => '0');
 	
-	        variable sum_low_65   : SIGNED(64 downto 0) := (others => '0');
-	        variable sum_high_65  : SIGNED(64 downto 0) := (others => '0');
+	        --Variables to store 65 bit sum values to perform clipping
+	        variable sum_low_65   : SIGNED(64 downto 0):= (others => '0');
+	        variable sum_high_65  : SIGNED(64 downto 0):= (others => '0');
 			
-			variable diff_1st_w : SIGNED(31 downto 0) := (others => '0');
-			variable diff_2nd_w : SIGNED(31 downto 0) := (others => '0');
-			variable diff_3rd_w : SIGNED(31 downto 0) := (others => '0');
-			variable diff_4th_w : SIGNED(31 downto 0) := (others => '0');
+	--Variables for Signed Muliplty subtract High, Low	
 			
-			variable diff_1st_w_33 : SIGNED(32 downto 0) := (others => '0');
-			variable diff_2nd_w_33 : SIGNED(32 downto 0) := (others => '0');
-			variable diff_3rd_w_33 : SIGNED(32 downto 0) := (others => '0');
-			variable diff_4th_w_33 : SIGNED(32 downto 0) := (others => '0');
+		-- 16-bit variant
+		
+			-- variables for 32-bit differences
+			variable diff_1st_w : SIGNED(31 downto 0):= (others => '0');
+			variable diff_2nd_w : SIGNED(31 downto 0):= (others => '0');
+			variable diff_3rd_w : SIGNED(31 downto 0):= (others => '0');
+			variable diff_4th_w : SIGNED(31 downto 0):= (others => '0');
 			
-			variable diff_low     : SIGNED(63 downto 0) := (others => '0');
-	        variable diff_high    : SIGNED(63 downto 0) := (others => '0'); 
+			-- 33-bit variables to handle clipping;
+			variable diff_1st_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable diff_2nd_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable diff_3rd_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable diff_4th_w_33 : SIGNED(32 downto 0):= (others => '0');
 			
-	        variable diff_low_65  : SIGNED(64 downto 0) := (others => '0');
-	        variable diff_high_65 : SIGNED(64 downto 0) := (others => '0');
 			
-		-- Variable for AHU and others
-		variable sum_17 : SIGNED(16 downto 0) := (others => '0');
-		variable product : UNSIGNED(31 downto 0) := (others => '0');
-		variable five_const : UNSIGNED(4 downto 0) := (others => '0');
-		variable count: INTEGER := 0;
-		variable word: UNSIGNED(31 downto 0) := (others => '0');
-		variable diff_17 : SIGNED(16 downto 0) := (others => '0');
+			-- 32-bit variant: 
+			
+			  --Variables to store 64 bit difference values
+	        variable diff_low     : SIGNED(63 downto 0):= (others => '0');
+	        variable diff_high    : SIGNED(63 downto 0):= (others => '0'); 
+			
+	        --Variables to store 65 bit difference values to perform clipping
+	        variable diff_low_65  : SIGNED(64 downto 0):= (others => '0');
+	        variable diff_high_65 : SIGNED(64 downto 0):= (others => '0');
+			
+		-- Variable for AHU
+		variable sum_17 : SIGNED(16 downto 0):= (others => '0'); -- 17 bit variable to store sum for saturation rounding
+			
+		--Variables to hold the 4 products for MLHU and MLHCU	
+		variable product : UNSIGNED(31 downto 0):= (others => '0'); --Stores the 32 bit product 
+		variable five_const : UNSIGNED(4 downto 0):= (others => '0'); --5 bit constant from rs2	
+		
+		--Variables for CLZW
+		variable count: INTEGER:= 0; --Counter variable to count 0s
+		variable word: UNSIGNED(31 downto 0):= (others => '0'); --variable to store each word from rs1
+		
+		--Variables for SFHS
+		variable diff_17 : SIGNED(16 downto 0):= (others => '0'); --17 bit variable to store difference.
 		
     begin 
 		rd <= (others => '0'); --clearing rd to prevent XXX
@@ -1364,21 +1395,17 @@ begin 
 		rs3_mux <= (others => '0');
         
         -- MUX LOGIC (Handles Operand Selection and Padding)
-        if is_load = '1' then 
-            -- Load Immediate (LI) processing: rs1_mux carries the new register value.
-            
-            -- This preserves all 128 bits that are NOT being overwritten by 'imm' or 'ind'.
-            rs1_mux <= rs1_d; 
-
-            -- Overwrite the specific fields: immediate (15:0) and index (18:16).
-            rs1_mux(15 downto 0) <= imm;
-            rs1_mux(18 downto 16) <= ind;
-            
-            if forward_2 = '1' then 
-                rs2_mux <= rs2_df;	
-            else 
-                rs2_mux <= rs2_d; 
-            end if;
+	      if is_load = '1' then 
+	    -- Build rs1_mux from scratch for LI
+	    rs1_mux <= (others => '0');  -- Clear everything
+	    rs1_mux(15 downto 0) <= imm;      
+	    rs1_mux(18 downto 16) <= ind;
+	    
+	    if forward_2 = '1' then 
+	        rs2_mux <= rs2_df;	
+	    else 
+	        rs2_mux <= rs2_d; 
+	    end if;
 
 			if forward_3 = '1' then 
                 rs3_mux <= rs3_df;	
@@ -1418,7 +1445,7 @@ begin 
     
     -- ALU instantiation 
     ALU : entity work.ALU(behavioral) port map (
-        instr => ALU_op, rs1 => rs1_mux, rs2 => rs2_mux, rs3 => rs3_d, rd => rd_d
+        instr => ALU_op, rs1 => rs1_mux, rs2 => rs2_mux, rs3 => rs3_mux, rd => rd_d
     );  
     
     -- Pipeline outputs

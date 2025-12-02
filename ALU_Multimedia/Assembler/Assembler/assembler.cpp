@@ -84,7 +84,7 @@ int main() {
 
             inFile >> rd_str >> rs1_str >> rs2_str >> rs3_str;
 
-            machine_line += "01";
+            machine_line += "10";
             machine_line += instr;
             machine_line += parseReg(rs3_str);
             machine_line += parseReg(rs2_str);
