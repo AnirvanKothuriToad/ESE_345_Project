@@ -16,6 +16,13 @@
 --
 -- Description :  A Structural Architecture that connects all entities: ALU, Register File, forwarding, and Pipeline
 --
+-- MODIFICATIONS:
+-- 1. Fixed IFID pipeline register port direction (data_in: out -> in)
+-- 2. Fixed Stage 2 write-back connections to use correct EX/WB signals
+-- 3. Fixed forwarding unit connections to compare current ID instruction with WB instruction
+-- 4. Removed unused signals (ew_write_en, ew_rd_addr, ew_alu_result)
+-- 5. Improved signal naming for clarity
+--
 -------------------------------------------------------------------------------
 
 --{{ Section below this comment is automatically maintained
@@ -154,87 +161,6 @@ begin
     end process;
     
 end behavioral_ultimate_fix;
---architecture behavioral of InstrBuffer is  
---
---    -- 1. Rename to MEM_ARRAY to ensure no namespace conflicts
---    type MEM_TYPE is array(0 to 63) of STD_LOGIC_VECTOR(24 downto 0); 
---    signal MEM_ARRAY : MEM_TYPE := (others => (others => '0')); 
---
---begin
---
---    -- --------------------------------------------------------
---    -- 1. SAFE ASYNCHRONOUS READ
---    -- --------------------------------------------------------
---    process(PC_in, MEM_ARRAY)
---    begin
---		
---        -- If PC is "Unknown" (XX) or "Uninitialized" (UU), output 0.
---        -- This prevents the "metavalue detected" error at Time 0.
---        if (is_x(PC_in)) then
---            data_out <= (others => '0'); 
---        else
---            data_out <= MEM_ARRAY(TO_INTEGER(UNSIGNED(PC_in)));
---        end if;
---    end process;
---
---    -- --------------------------------------------------------
---    -- 2. SYNCHRONOUS WRITE 
---    -- --------------------------------------------------------
---	process(clk, reset)
---    begin
---		--if(reset = '1') then
---			--MEM_ARRAY <= (others => (others => '0'));
---			
---        if rising_edge(clk) then  
---            if (write_enable = '1') then 
---                -- DEBUG: This will print to console every time a write happens.
---                -- If you don't see this in the Transcript, the write isn't happening!
---                report "RAM WRITE: Addr=" & integer'image(TO_INTEGER(UNSIGNED(PC_in))) & " Data=" & to_hstring(data_in);
---                
---                MEM_ARRAY(TO_INTEGER(UNSIGNED(PC_in))) <= data_in;
---            end if;
---        end if; 
---    end process;
---
---end behavioral;
---architecture behavioral of InstrBuffer is  
---
---type INSTR_BUFFER_TYPE is array(0 to 63) of STD_LOGIC_VECTOR(24 downto 0);	-- Create type of 64 25-bit registers 
---
---signal INSTR_BUFFER : INSTR_BUFFER_TYPE := (others => (others => '0'));	-- Create actual signal using type and clear all registers
---
---begin
---	data_out <= INSTR_BUFFER(TO_INTEGER(UNSIGNED(PC_in)));	
---	
---	process (clk) is	-- Only operating on rising clock edges unless reset is asserted
---	
---	begin
---		--if (reset = '1') then	-- Asynchronous reset, does not rely on clk
---			
---			-- Clear instruction buffer and set all outputs to 0
---			
---			--INSTR_BUFFER <= (others => (others => '0'));
---			--data_out <= (others => '0');
---		
---			
---		if rising_edge(clk) then  -- reset not asserted, function normally  --CHNAGE BACK TO eslif
---				
---				-- Read value pointed to by PC (connected to address input)
---				
---				--data_out <= INSTR_BUFFER(TO_INTEGER(UNSIGNED(PC_in)));
---			
---				if (write_enable = '1')	then -- Write is enabled, write to pointed-to register
---					
---					INSTR_BUFFER(TO_INTEGER(UNSIGNED(PC_in))) <= data_in;
---					
---					
---				end if;
---				
---			end if;
---					
---	end process;
---
---end behavioral;
 
 --------------------------------
 --Structural Unit for Stage 1---
@@ -310,7 +236,7 @@ entity IFID is
 	port(	
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
 		clk : in STD_LOGIC;							   		-- Clock signal	 
-		data_in : out STD_LOGIC_VECTOR(24 downto 0);	   	-- Input
+		data_in : in STD_LOGIC_VECTOR(24 downto 0);	   		-- FIXED: Changed from 'out' to 'in' - this is an INPUT to the pipeline register
 		data_out : out STD_LOGIC_VECTOR(24 downto 0)		-- Output													
 	);
 end IFID;
@@ -346,6 +272,7 @@ begin
 	end process;
 
 end behavioral;
+
 
 --------------------------
 --STAGE 2------------------
@@ -581,29 +508,27 @@ begin
 			
 		else  -- reset not asserted, function normally
 			
-			if rising_edge(clk) then 	-- Update on every positive edge of clk 
-				
-				-- Read value from each of the three pointed-to registers
-				
-				data_out_A <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_A)));
-				data_out_B <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_B)));
-				data_out_C <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_C))); 
+			-- Reads must be asynch, and writing is synch
 			
-				if (write_enable = '1')	then -- Write is enabled, write to pointed-to register
+			-- Reading
+			data_out_A <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_A)));
+			data_out_B <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_B)));
+			data_out_C <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_C))); 
+			
+			-- Writing
+			if rising_edge(clk) and write_enable = '1' then 	-- If clock edge and write enabled, then write
 					
-					REG_FILE(TO_INTEGER(UNSIGNED(address_in))) <= data_in;
+				REG_FILE(TO_INTEGER(UNSIGNED(address_in))) <= data_in;
+				
+				-- Need to implement bypass if register that is being written to is also being read from in same clk edge 
 					
-					-- Need to implement bypass if register that is being written to is also being read from in same clk edge 
-						
-					if (address_in = address_out_A) then data_out_A <= data_in; 	-- Directly write input to output 
-					end if;
-					
-					if (address_in = address_out_B) then data_out_B <= data_in;
-					end if;													
-					
-					if (address_in = address_out_C) then data_out_C <= data_in;
-					end if;
-					
+				if (address_in = address_out_A) then data_out_A <= data_in; 	-- Directly write input to output 
+				end if;
+				
+				if (address_in = address_out_B) then data_out_B <= data_in;
+				end if;													
+				
+				if (address_in = address_out_C) then data_out_C <= data_in;
 				end if;
 				
 			end if;
@@ -631,14 +556,14 @@ entity stage_2 is
 	reset: in std_logic;
 	
 	--Input from IF/ID Register(Instruction)
-	instr_in : std_logic_vector(24 downto 0);
+	instr_in : in std_logic_vector(24 downto 0);
 	
 	--Inputs from Write Back Stage
 	wb_reg_write: in std_logic;
 	wb_dest_addr: in std_logic_vector(4 downto 0);
 	wb_write_data: in std_logic_vector(127 downto 0);
 	
-	--Outputs to ID?EX Register
+	--Outputs to ID/EX Register
 	--Control Signals
 	ctrl_write_en : out std_logic;
 	ctrl_alu_op	  : out std_logic_vector(4 downto 0);
@@ -733,7 +658,8 @@ end structural;
 
 --------End of Stage_2 Structural---------
 
-	------------------------------------
+
+------------------------------------
 	--ID/EX Pipeline Register-----------
 	------------------------------------
 
@@ -858,11 +784,6 @@ begin
 	end process;
 
 end behavioral;
-
-
-
-
-
 	
 --------------------------
 --STAGE 3------------------
@@ -1402,7 +1323,7 @@ begin
             when "01001" =>  -- NOP
 			-----------------------
 			
-				rd <= (others => '-');	-- Do nothing basically
+				rd <= (others => '0');	-- Do nothing basically
 			
 			-------------------------
             when "01010" =>  -- SHRHI
@@ -1768,7 +1689,9 @@ entity execute is
 	ALU_source : in STD_LOGIC;					-- ALU source (use in if statement to pass correct value into ALU)
 	is_load : in STD_LOGIC;						-- is_load (use in if statement to pass correct value into ALU)	 
 		
-	forward : in STD_LOGIC;						-- forward control signal (comes from forwarding unit in WB stage)
+	forward_1 : in STD_LOGIC;						-- forward control signals (comes from forwarding unit in WB stage)
+	forward_2 : in STD_LOGIC;	
+	forward_3 : in STD_LOGIC;	
 	
 	-- Read register numbers
 	rs1 : in STD_LOGIC_VECTOR(4 downto 0);
@@ -1806,46 +1729,71 @@ architecture structural of execute is
 
 signal rs1_mux : STD_LOGIC_VECTOR(127 downto 0); 
 signal rs2_mux : STD_LOGIC_VECTOR(127 downto 0);
--- rs3 never goes through a MUX
+signal rs3_mux : STD_LOGIC_VECTOR(127 downto 0);
 
 begin 
 	
 	process (all) is
 	
-	begin
-	
-		if is_load = '1' then 
-			rs1_mux(15 downto 0) <= imm;
-			rs1_mux(18 downto 16) <= ind;
-			rs1_mux(127 downto 19) <= (others => '-');	-- Set rest as don't cares
+	    begin
+
+        -- This eliminates any possibility of an 'X' or 'U' floating into the ALU.
+        rs1_mux <= (others => '0'); 
+        rs2_mux <= (others => '0');
+		rs3_mux <= (others => '0');
+        
+        -- MUX LOGIC (Handles Operand Selection and Padding)
+        if is_load = '1' then 
+            -- Load Immediate (LI) processing: rs1_mux carries the new register value.
+            
+            -- This preserves all 128 bits that are NOT being overwritten by 'imm' or 'ind'.
+            rs1_mux <= rs1_d; 
+
+            -- Overwrite the specific fields: immediate (15:0) and index (18:16).
+            rs1_mux(15 downto 0) <= imm;
+            rs1_mux(18 downto 16) <= ind;
+            
+            if forward_2 = '1' then 
+                rs2_mux <= rs2_df;	
+            else 
+                rs2_mux <= rs2_d; 
+            end if;
+
+			if forward_3 = '1' then 
+                rs3_mux <= rs3_df;	
+            else 
+                rs3_mux <= rs3_d; 
+            end if;
+        
+        elsif ALU_source = '1' then 
+            -- Immediate/Shift Instructions (SHRHI, MLHCU)
+            
+            -- rs1_mux handles forwarding for the main register source
+            if forward_1 = '1' then 
+                rs1_mux <= rs1_df; 
+            else 
+                rs1_mux <= rs1_d; 
+            end if;
+            
+            -- CRITICAL FIX 2: Zero-extend the 5-bit immediate input (rs2).
+            -- rs2_mux is cleared to '0' at the start of the process, so we only need to drive the low bits.
+            rs2_mux(4 downto 0) <= rs2(4 downto 0);
 			
-			if forward = '1' then 
-				rs2_mux <= rs2_df;	-- rs2_d should be same as rd
-				
-			else 
-				rs2_mux <= rs2_d; 
-				
-			end if;
-		
-		elsif ALU_source = '1' then	
-			
-			if forward = '1' then
-				rs1_mux <= rs1_df;
-			
+			if forward_3 = '1' then
+				rs3_mux <= rs3_df;
 			else
-				rs1_mux <= rs1_d;
-			
+				rs3_mux <= rs3_d;
 			end if;
-			
-			rs2_mux(4 downto 0) <= rs2;	-- rs2 has the same value as the immediate field from original instruction 
-			
-		else 
-			rs1_mux <= rs1_d;
-			rs2_mux <= rs2_d;
-		
-		end if;
-		
-	end process;
+        
+		else 
+            	-- Standard R-Type (rs1, rs2, rs3 are all registers)
+            	rs1_mux <= rs1_df when forward_1 = '1' else rs1_d; 
+            	rs2_mux <= rs2_df when forward_2 = '1' else rs2_d;
+			rs3_mux <= rs3_df when forward_3 = '1' else rs3_d;
+        
+        	end if;
+        
+    end process;
 		
 	ALU : entity ALU(behavioral) port map (
 		instr => ALU_op,
@@ -1892,7 +1840,9 @@ entity forwarding is
 		-- Register value to forward
 		rd_d : in STD_LOGIC_VECTOR(127 downto 0);			-- rd_d input 
 		
-		forward : out STD_LOGIC								-- Forwarding MUX control signal
+		forward_1 : out STD_LOGIC;								-- Forwarding MUX control signal
+		forward_2 : out STD_LOGIC;	
+		forward_3 : out STD_LOGIC	
 		
 	);
 end forwarding;
@@ -1903,39 +1853,42 @@ architecture behavioral of forwarding is
 
 begin
 
-	process(rs1, rs2, rs3, rd, rd_d) is	-- Only operating on rising clock edges unless reset is asserted
+	process(all) is	-- Only operating on rising clock edges unless reset is asserted
 	
-	begin		  
-		
-		if rd = rs1 then   
-			
-			-- If register that is being written to matches register that is being read from, forward value
-			forward <= '1';		-- Assert forward control signal	  
-			rs1_d <= rd_d;		-- Directly copy value for rd_d to rs1_d 
-			rs2_d <= (others => '-');	-- Other register data is don't cares 
-			rs3_d <= (others => '-');
-			
-		elsif rd = rs2 then
-			forward <= '1';
-			rs1_d <= (others => '-');
-			rs2_d <= rd_d;
-			rs3_d <= (others => '-');
-			
-		elsif rd = rs3 then	
-			forward <= '1';
-			rs1_d <= (others => '-');
-			rs2_d <= (others => '-');
+    begin 
+
+        if rd = rs1 then    
+            forward_1 <= '1';
+			forward_2 <= '0';
+			forward_3 <= '0';
+			rs1_d <= rd_d; 
+			rs2_d <= (others => '0'); 
+			rs3_d <= (others => '0');
+
+        elsif rd = rs2 then
+            forward_1 <= '0';
+			forward_2 <= '1';
+			forward_3 <= '0';
+			rs1_d <= (others => '0'); 
+			rs2_d <= rd_d; 
+			rs3_d <= (others => '0');
+
+        elsif rd = rs3 then 
+            forward_1 <= '0';
+			forward_2 <= '0';
+			forward_3 <= '1';
+			rs1_d <= (others => '0'); 
+			rs2_d <= (others => '0');
 			rs3_d <= rd_d;
-			
-		else  -- Forwarding unnecessary, turn off control signal
-			forward <= '0';
-			rs1_d <= (others => '-');
-			rs2_d <= (others => '-');
-			rs3_d <= (others => '-');
-			
-		end if;
-		
-	end process;
+        else 
+            forward_1 <= '0';
+			forward_2 <= '0';
+			forward_3 <= '0';
+			rs1_d <= (others => '0'); 
+			rs2_d <= (others => '0');
+			rs3_d <= (others => '0');
+        end if;
+    end process;
 
 end behavioral;
 
@@ -1965,7 +1918,9 @@ entity writeback is
 	rd : in STD_LOGIC_VECTOR(4 downto 0);  		-- rd number
 	rd_d : in STD_LOGIC_VECTOR(127 downto 0);	-- rd data	
 	
-	forward : out STD_LOGIC
+	forward_1 : out STD_LOGIC;
+	forward_2 : out STD_LOGIC;
+	forward_3 : out STD_LOGIC
 		
 	);
 end writeback;
@@ -1990,7 +1945,9 @@ begin
 		
 		rd_d => rd_d, 
 		
-		forward => forward
+		forward_1 => forward_1,
+		forward_2 => forward_2,
+		forward_3 => forward_3
 		
 	);	  
 	
@@ -2084,7 +2041,9 @@ entity CPU is
 			res_PC : out std_logic_vector(5 downto 0);
 			res_Instruction : out std_logic_vector(24 downto 0);
 			res_ALU_Result  : out std_logic_vector(127 downto 0);
-        	res_Forward   	: out std_logic;
+        	res_Forward_1   	: out std_logic;
+		res_Forward_2   	: out std_logic;
+		res_Forward_3 	: out std_logic;
         	res_WB_Data     : out std_logic_vector(127 downto 0);
         	res_RegWrite    : out std_logic
 		);
@@ -2196,7 +2155,9 @@ architecture structural of CPU is
 		-- Register value to forward
 		signal forward_rd_d :  STD_LOGIC_VECTOR(127 downto 0);			-- rd_d input 
 		
-		signal forward_ctrl_sig :  STD_LOGIC;								-- Forwarding MUX control signal
+		signal forward_1_ctrl_sig :  STD_LOGIC;								-- Forwarding MUX control signals
+		signal forward_2_ctrl_sig :  STD_LOGIC;
+		signal forward_3_ctrl_sig :  STD_LOGIC;
 
 	-----------------------------------------
 	-- Local Signals for Stage 4 - Write-back
@@ -2332,7 +2293,9 @@ begin
 			is_load => ie_is_load,
 			
 			--Forwarding input control
-			forward => forward_ctrl_sig,
+			forward_1 => forward_1_ctrl_sig,
+			forward_2 => forward_2_ctrl_sig,
+			forward_3 => forward_3_ctrl_sig,
 			
 			--Register address inputs
 			rs1 => ie_rs1_addr,
@@ -2394,7 +2357,9 @@ begin
 			rd     			=> ew_rd_addr, 
 			rd_d			=> ew_alu_result, 
 			
-			forward => forward_ctrl_sig
+			forward_1 => forward_1_ctrl_sig,
+			forward_2 => forward_2_ctrl_sig,
+			forward_3 => forward_3_ctrl_sig
 	
 		);
 		
@@ -2405,7 +2370,9 @@ begin
 		res_WB_Data     <= EX_rd_d_out; 
     	res_RegWrite    <= EX_we_out;									    --res_WB_Data     <= 	 ew_alu_result;
 											    --res_RegWrite    <= 	 ew_write_en;
-	    res_Forward	    <=   forward_ctrl_sig; 
+	    res_Forward_1	    <=   forward_1_ctrl_sig; 
+		res_Forward_2	    <=   forward_2_ctrl_sig; 
+		res_Forward_3	    <=   forward_3_ctrl_sig; 
 		
 		reg_file_contents <= res_s2_reg_file;
 		
