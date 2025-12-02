@@ -1,38 +1,8 @@
 -------------------------------------------------------------------------------
---
--- Title       : CPU
+-- Title       : CPU (FINAL DEBUGGED STRUCTURAL CODE)
 -- Design      : CPU_Multimedia
--- Author      : Anirvan Kothuri and Mahir Patel
--- Company     : Stony Brook University
---
+-- Description : Complete Model with InstructionMemory Fixes and Pipeline Wiring
 -------------------------------------------------------------------------------
---
--- File        : C:/Users/anirv/Downloads/Fall 2025/ESE 345/Project1/ProjectPart1/ALU_Multimedia/src/Multimedia_CPU.vhd
--- Generated   : Sat Nov 29 13:46:11 2025
--- From        : Interface description file
--- By          : ItfToHdl ver. 1.0
---
--------------------------------------------------------------------------------
---
--- Description :  A Structural Architecture that connects all entities: ALU, Register File, forwarding, and Pipeline
---
--- MODIFICATIONS:
--- 1. Fixed IFID pipeline register port direction (data_in: out -> in)
--- 2. Fixed Stage 2 write-back connections to use correct EX/WB signals
--- 3. Fixed forwarding unit connections to compare current ID instruction with WB instruction
--- 4. Removed unused signals (ew_write_en, ew_rd_addr, ew_alu_result)
--- 5. Improved signal naming for clarity
---
--------------------------------------------------------------------------------
-
---{{ Section below this comment is automatically maintained
---    and may be overwritten
---{entity {CPU} architecture {CPU}}
-
- 
-	-------------------------------
-	--PC Register------------------
-	-------------------------------
 
 library IEEE;
 use IEEE.std_logic_1164.all; 
@@ -50,6 +20,18 @@ use work.all;
 use work.CPU_Defs.all;
 
 
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-- STAGE 1 ---- STAGE 1 ---- STAGE 1 ---- STAGE 1 ---- STAGE 1 -- 
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+
+					
+					
+---------------
+-- PC Register
+---------------
 entity PC is
 	port(	
 		reset : in STD_LOGIC;							  	-- Asynchronous reset
@@ -91,9 +73,9 @@ begin
 
 end behavioral;
 
-	-------------------------------
-	--INSTRUCTION BUFFER-----------
-	-------------------------------
+---------------------
+-- Instruction Buffer
+---------------------
 
 library IEEE;
 use IEEE.std_logic_1164.all; 
@@ -162,9 +144,9 @@ begin
     
 end behavioral_ultimate_fix;
 
---------------------------------
---Structural Unit for Stage 1---
---------------------------------
+------------------
+-- Stage 1 (Fetch)
+------------------
 library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all;
@@ -186,47 +168,43 @@ entity stage_1 is
 	);
 end stage_1;
 
-
 architecture structural of stage_1 is
-
-	signal current_pc : std_logic_vector(5 downto 0); --Internal PC Signal
-	
-	signal buffer_addr_in : std_logic_vector(5 downto 0);
-	
-	signal s1_instr_data : STD_LOGIC_VECTOR(24 downto 0);
-	
+    signal current_pc : std_logic_vector(5 downto 0); 
+    signal buffer_addr_in : std_logic_vector(5 downto 0); 
+    
+    signal s1_instr_data_read : STD_LOGIC_VECTOR(24 downto 0);
 begin
-	
+    
 	pc_out <= current_pc; --Connecting local signal to port
 	
 	buffer_addr_in <= load_addr when load_en = '1' else current_pc;	--When load_en is asserted, address from testbench will be used
-	
-	u0: entity PC
+    
+    u0: entity PC
 		port map(
 		reset => reset,
 		clk => clk,
 		data_out => current_pc --connecting PC value to local signal
 		);
-	
-	stagr_1: entity work.InstrBuffer
-		port map(
-		reset => reset,
-		clk => clk,
-		write_enable => load_en,
-		PC_in => buffer_addr_in,
-		data_in => load_data,
-		data_out => s1_instr_data
-		);
-		
-		instr_out <= s1_instr_data;
-end structural;
-		
---------End of Stage_1 Structural---------	
+    
+    -- FIXED BINDING: Use work.InstrBuffer and map to internal signal
+    u1: entity work.InstrBuffer 
+        port map(
+            reset => reset,
+            clk => clk,
+            write_enable => load_en,
+            PC_in => buffer_addr_in,
+            data_in => load_data,
+            data_out => s1_instr_data_read -- Map to internal signal
+        );
+    
+    -- STRUCTURAL FIX: Assign the internal signal to the external port
+    instr_out <= s1_instr_data_read;
 
-	------------------------------------
-	--IF/ID Pipeline Register-----------
-	------------------------------------
-	
+end structural;
+
+------------------------------------
+-- IF/ID Pipeline Register
+------------------------------------
 library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all;
@@ -274,15 +252,19 @@ begin
 end behavioral;
 
 
---------------------------
---STAGE 2------------------
----------------------------
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-- STAGE 2 ---- STAGE 2 ---- STAGE 2 ---- STAGE 2 ---- STAGE 2 -- 
+-----------------------------------------------------------------
+-----------------------------------------------------------------
 
 
-	------------------------------------
-	--Control Unit-----------
-	------------------------------------
-	
+
+------------------------------------
+-- Control Unit
+------------------------------------
+
 library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all;
@@ -299,12 +281,8 @@ entity control is
 		
 		is_load	: out STD_LOGIC						-- Switch MUX inputs if load instruction 
 													-- (rs1(18 downto 16) <= load_index, rs1(15 downto 0) <= load_imm, rs2 <= rd)
-		
-	
 	);
 end control;
-
---}} End of automatically maintained section
 
 architecture behavioral of control is  
 
@@ -449,16 +427,15 @@ begin
 
 end behavioral;
 
+----------------
+-- Register File
+----------------   
 
-	------------------------------------
-	--Register File-----------
-	------------------------------------ 
-	
 library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all;
-use work.CPU_Defs.all;
 use work.all;
+use work.CPU_Defs.all;
 
 entity RegFile is
 	port(	
@@ -483,74 +460,49 @@ entity RegFile is
 	);
 end RegFile;
 
---}} End of automatically maintained section
+architecture behavioral of RegFile is
 
-architecture behavioral of RegFile is  
-
-type REG_FILE_TYPE is array(0 to 31) of STD_LOGIC_VECTOR(127 downto 0);	-- Create type of 32 128-bit registers 
-
-signal REG_FILE : REG_FILE_ARRAY_TYPE := (others => (others => '0'));	-- Create actual signal using type and clear all registers
+signal REG_FILE : REG_FILE_ARRAY_TYPE := (others => (others => '0'));	
 
 begin
 	reg_file_full <= REG_FILE;
-	process (reset, clk) is	-- Only operating on rising clock edges unless reset is asserted
 	
+    -- ASYNCHRONOUS READS
+    -- These assignments are instantaneous and provide R1, R2, R3 data to the ALU.
+    data_out_A <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_A)));
+    data_out_B <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_B)));
+    data_out_C <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_C))); 
+
+	process (reset, clk) is	
 	begin
-		if (reset = '1') then	-- Asynchronous reset, does not rely on clk
+		if (reset = '1') then		
 			
-			-- Clear register file and set all outputs to 0
-			
+			-- Only reset the storage array since outputs are asynchronous
 			REG_FILE <= (others => (others => '0'));
-			data_out_A <= (others => '0');
-			data_out_B <= (others => '0');
-			data_out_C <= (others => '0'); 
-			
-			
-		else  -- reset not asserted, function normally
-			
-			-- Reads must be asynch, and writing is synch
-			
-			-- Reading
-			data_out_A <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_A)));
-			data_out_B <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_B)));
-			data_out_C <= REG_FILE(TO_INTEGER(UNSIGNED(address_out_C))); 
-			
-			-- Writing
+
+		else
 			if rising_edge(clk) and write_enable = '1' then 	-- If clock edge and write enabled, then write
 					
 				REG_FILE(TO_INTEGER(UNSIGNED(address_in))) <= data_in;
-				
-				-- Need to implement bypass if register that is being written to is also being read from in same clk edge 
 					
-				if (address_in = address_out_A) then data_out_A <= data_in; 	-- Directly write input to output 
-				end if;
-				
-				if (address_in = address_out_B) then data_out_B <= data_in;
-				end if;													
-				
-				if (address_in = address_out_C) then data_out_C <= data_in;
-				end if;
-				
 			end if;
-			
 		end if;
 					
 	end process;
-
-end behavioral;	
+end behavioral;
 
 --------------------------------
---Structural Unit for Stage 2---
---------------------------------
+-- Stage 2 (Decode)
+--------------------------------   
 
 library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all;
-use work.CPU_Defs.all;
 use work.all;
+use work.CPU_Defs.all;
 
 entity stage_2 is 
-	port(
+    	port(
 	
 	clk: in std_logic;
 	reset: in std_logic;
@@ -582,30 +534,26 @@ entity stage_2 is
     imm_out       : out std_logic_vector(15 downto 0);
     ld_idx_out    : out std_logic_vector(2 downto 0);
 	
+	
 	reg_file_out : out REG_FILE_ARRAY_TYPE
-	);
+    );
 end stage_2;
 
 architecture structural of stage_2 is
-
-	--Internal signals for register addresses
-	signal addr_a : std_logic_vector(4 downto 0);  --For rs1
-	signal addr_b : std_logic_vector(4 downto 0);  --For rs2
-	signal addr_c : std_logic_vector(4 downto 0);  --For rs3
-	
-	signal sig_is_load : std_logic;	 --MUX input if instruction is load or not
-
+    signal addr_a : std_logic_vector(4 downto 0);  
+    signal addr_b : std_logic_vector(4 downto 0);  
+    signal addr_c : std_logic_vector(4 downto 0);  
+    signal sig_is_load : std_logic;  
 begin
-	
-	u0: entity control
-		port map(
-			instr => instr_in,
-			write_enable => ctrl_write_en,
-			ALU_op => ctrl_alu_op,
-			ALU_source => ctrl_alu_src,
-			is_load => sig_is_load
-		);
-		
+    u0: entity control
+        port map(
+            instr => instr_in,
+            write_enable => ctrl_write_en,
+            ALU_op => ctrl_alu_op,
+            ALU_source => ctrl_alu_src,
+            is_load => sig_is_load
+        );
+  		
 	ctrl_is_load <= sig_is_load; --Passing the signal to ID/EX register
 	
 	--RS1 bits 9-5
@@ -617,9 +565,8 @@ begin
 	--RS2 MUX needed
 	-- If LI (sig_is_load ='1') then destination register has to be read
 	addr_b <= instr_in(4 downto 0) when sig_is_load = '1' else instr_in(14 downto 10);
-		
-		
-	--Accessing Register File entity
+        
+   	--Accessing Register File entity
 	u1: entity regFile
 		port map(
 			clk => clk,
@@ -641,8 +588,8 @@ begin
 			data_out_C => rs3_data,	
 			
 			reg_file_full => reg_file_out
-		); 
-	
+		); 		 
+		
 	--Send data to ID/EX (Needed in Forwarding)
 	rs1_addr_out <= addr_a;
     rs2_addr_out <= addr_b;
@@ -655,13 +602,9 @@ begin
 	
 end structural; 
 
-
---------End of Stage_2 Structural---------
-
-
-------------------------------------
-	--ID/EX Pipeline Register-----------
-	------------------------------------
+--------------------------
+-- ID/EX Pipeline Register
+-------------------------- 
 
 library IEEE;
 use IEEE.std_logic_1164.all; 
@@ -720,11 +663,8 @@ entity IDEX is
 		ind_in : in STD_LOGIC_VECTOR(2 downto 0);			-- ind input
 		ind_out : out STD_LOGIC_VECTOR(2 downto 0)			-- ind output
 		
-		
 	);
 end IDEX;
-
---}} End of automatically maintained section
 
 architecture behavioral of IDEX is  
 
@@ -784,15 +724,21 @@ begin
 	end process;
 
 end behavioral;
-	
---------------------------
---STAGE 3------------------
----------------------------
-	
-	-----------------
-	--ALU------------
-	-----------------
-	
+
+
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-- STAGE 3 ---- STAGE 3 ---- STAGE 3 ---- STAGE 3 ---- STAGE 3 -- 
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+
+
+
+------
+-- ALU 
+------
+
 library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
@@ -821,7 +767,7 @@ architecture behavioral of ALU is
 	--Setting MSB as 1 and everything else as 0 to obtain the smallest signed number
 	constant SIGNED_16_MIN : SIGNED(15 downto 0) := (15 => '1', others => '0');
 	constant SIGNED_32_MIN : SIGNED(31 downto 0) := (31 => '1', others => '0');
-    constant SIGNED_64_MIN : SIGNED(63 downto 0) := (63 => '1', others => '0');	 
+    	constant SIGNED_64_MIN : SIGNED(63 downto 0) := (63 => '1', others => '0');	 
 	
 begin
 
@@ -836,80 +782,81 @@ begin
 		-- 16 bit variant:	 
 		
 			-- Variables of products (16-bit [half word] values to 32-bit product)
-			variable product_1st_hw : SIGNED(31 downto 0); 
-			variable product_2nd_hw : SIGNED(31 downto 0);
-			variable product_3rd_hw : SIGNED(31 downto 0);
-			variable product_4th_hw : SIGNED(31 downto 0); 	
+			variable product_1st_hw : SIGNED(31 downto 0):= (others => '0'); 
+			variable product_2nd_hw : SIGNED(31 downto 0):=  (others => '0');
+			variable product_3rd_hw : SIGNED(31 downto 0):=  (others => '0');
+			variable product_4th_hw : SIGNED(31 downto 0):=  (others => '0'); 	
 			
 			-- Store 32-bit sum
-			variable sum_1st_w : SIGNED(31 downto 0);  
-			variable sum_2nd_w : SIGNED(31 downto 0);
-			variable sum_3rd_w : SIGNED(31 downto 0);
-			variable sum_4th_w : SIGNED(31 downto 0);	 
+			variable sum_1st_w : SIGNED(31 downto 0):= (others => '0');  
+			variable sum_2nd_w : SIGNED(31 downto 0):=  (others => '0');
+			variable sum_3rd_w : SIGNED(31 downto 0):=  (others => '0');
+			variable sum_4th_w : SIGNED(31 downto 0):=  (others => '0');	 
 			
 			-- 33-bit variables to handle clipping
-			variable sum_1st_w_33 : SIGNED(32 downto 0);
-			variable sum_2nd_w_33 : SIGNED(32 downto 0);
-			variable sum_3rd_w_33 : SIGNED(32 downto 0);
-			variable sum_4th_w_33 : SIGNED(32 downto 0);
+			variable sum_1st_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable sum_2nd_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable sum_3rd_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable sum_4th_w_33 : SIGNED(32 downto 0):= (others => '0');
 	
 		
 		-- 32 bit variant:
 	        --variable to store product of low 32 bits
-	        variable product_low  : SIGNED(63 downto 0);
+	        variable product_low  : SIGNED(63 downto 0):= (others => '0');
 	        --variable to store product of high 32 bits
-	        variable product_high : SIGNED(63 downto 0);
+	        variable product_high : SIGNED(63 downto 0):= (others => '0');
 	
 	        --Variables to store 64 bit sum values
-	        variable sum_low      : SIGNED(63 downto 0);
-	        variable sum_high     : SIGNED(63 downto 0);
+	        variable sum_low      : SIGNED(63 downto 0):= (others => '0');
+	        variable sum_high     : SIGNED(63 downto 0):= (others => '0');
 	
 	        --Variables to store 65 bit sum values to perform clipping
-	        variable sum_low_65   : SIGNED(64 downto 0);
-	        variable sum_high_65  : SIGNED(64 downto 0);
+	        variable sum_low_65   : SIGNED(64 downto 0):= (others => '0');
+	        variable sum_high_65  : SIGNED(64 downto 0):= (others => '0');
 			
 	--Variables for Signed Muliplty subtract High, Low	
 			
 		-- 16-bit variant
 		
 			-- variables for 32-bit differences
-			variable diff_1st_w : SIGNED(31 downto 0);
-			variable diff_2nd_w : SIGNED(31 downto 0);
-			variable diff_3rd_w : SIGNED(31 downto 0);
-			variable diff_4th_w : SIGNED(31 downto 0);
+			variable diff_1st_w : SIGNED(31 downto 0):= (others => '0');
+			variable diff_2nd_w : SIGNED(31 downto 0):= (others => '0');
+			variable diff_3rd_w : SIGNED(31 downto 0):= (others => '0');
+			variable diff_4th_w : SIGNED(31 downto 0):= (others => '0');
 			
 			-- 33-bit variables to handle clipping;
-			variable diff_1st_w_33 : SIGNED(32 downto 0);
-			variable diff_2nd_w_33 : SIGNED(32 downto 0);
-			variable diff_3rd_w_33 : SIGNED(32 downto 0);
-			variable diff_4th_w_33 : SIGNED(32 downto 0);
+			variable diff_1st_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable diff_2nd_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable diff_3rd_w_33 : SIGNED(32 downto 0):= (others => '0');
+			variable diff_4th_w_33 : SIGNED(32 downto 0):= (others => '0');
 			
 			
 			-- 32-bit variant: 
 			
 			  --Variables to store 64 bit difference values
-	        variable diff_low     : SIGNED(63 downto 0);
-	        variable diff_high    : SIGNED(63 downto 0); 
+	        variable diff_low     : SIGNED(63 downto 0):= (others => '0');
+	        variable diff_high    : SIGNED(63 downto 0):= (others => '0'); 
 			
 	        --Variables to store 65 bit difference values to perform clipping
-	        variable diff_low_65  : SIGNED(64 downto 0);
-	        variable diff_high_65 : SIGNED(64 downto 0);
+	        variable diff_low_65  : SIGNED(64 downto 0):= (others => '0');
+	        variable diff_high_65 : SIGNED(64 downto 0):= (others => '0');
 			
 		-- Variable for AHU
-		variable sum_17 : SIGNED(16 downto 0); -- 17 bit variable to store sum for saturation rounding
+		variable sum_17 : SIGNED(16 downto 0):= (others => '0'); -- 17 bit variable to store sum for saturation rounding
 			
 		--Variables to hold the 4 products for MLHU and MLHCU	
-		variable product : UNSIGNED(31 downto 0); --Stores the 32 bit product 
-		variable five_const : UNSIGNED(4 downto 0); --5 bit constant from rs2	
+		variable product : UNSIGNED(31 downto 0):= (others => '0'); --Stores the 32 bit product 
+		variable five_const : UNSIGNED(4 downto 0):= (others => '0'); --5 bit constant from rs2	
 		
 		--Variables for CLZW
-		variable count: INTEGER; --Counter variable to count 0s
-		variable word: UNSIGNED(31 downto 0); --variable to store each word from rs1
+		variable count: INTEGER:= 0; --Counter variable to count 0s
+		variable word: UNSIGNED(31 downto 0):= (others => '0'); --variable to store each word from rs1
 		
 		--Variables for SFHS
-		variable diff_17 : SIGNED(16 downto 0); --17 bit variable to store difference.
+		variable diff_17 : SIGNED(16 downto 0):= (others => '0'); --17 bit variable to store difference.
 		
-    begin
+    begin 
+		rd <= (others => '0'); --clearing rd to prevent XXX
         case instr is  
 			----------------------------------
             when "00000" =>  -- Load Immediate
@@ -917,6 +864,7 @@ begin
 				imm := rs1(15 downto 0); --Extracting 16 LSBs from RS1 to obtain the immediate value
 				ld_in := UNSIGNED(rs1(18 downto 16)); --Using Bits 18, 17, 16 for the index value
 				
+				-- Assuming rd will be passed as input rs2
                 case STD_LOGIC_VECTOR(ld_in) is
                     when "000" => rd <= rs2(127 downto 16) & imm;
                     when "001" => rd <= rs2(127 downto 32) & imm & rs2(15 downto 0);
@@ -1328,7 +1276,7 @@ begin
 			-------------------------
             when "01010" =>  -- SHRHI
 			-------------------------
-			
+				   rd <= (others => '0'); --Clearing initially to prevent contamination
 				-- rs1 is the target register, rs2 4 LSBs are shift amount
 				
 				-- Using shift_right() from numeric.std, takes a unsigned array to shift and an integer for shift amount
@@ -1670,9 +1618,8 @@ begin
 end behavioral;
 
 -------------------
--- Execute Stage --
+-- Execute Stage
 -------------------
-
 library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all;
@@ -1721,19 +1668,17 @@ entity execute is
 		
 		
 	);
-end execute;
+end execute;	
 
---}} End of automatically maintained section
 
-architecture structural of execute is  
+architecture structural of execute is  
+    	signal rs1_mux : STD_LOGIC_VECTOR(127 downto 0); 
+    	signal rs2_mux : STD_LOGIC_VECTOR(127 downto 0);
+	signal rs3_mux : STD_LOGIC_VECTOR(127 downto 0);
 
-signal rs1_mux : STD_LOGIC_VECTOR(127 downto 0); 
-signal rs2_mux : STD_LOGIC_VECTOR(127 downto 0);
-signal rs3_mux : STD_LOGIC_VECTOR(127 downto 0);
-
-begin 
-	
-	process (all) is
+begin 
+    
+    process (all) is
 	
 	    begin
 
@@ -1775,7 +1720,6 @@ begin
                 rs1_mux <= rs1_d; 
             end if;
             
-            -- CRITICAL FIX 2: Zero-extend the 5-bit immediate input (rs2).
             -- rs2_mux is cleared to '0' at the start of the process, so we only need to drive the low bits.
             rs2_mux(4 downto 0) <= rs2(4 downto 0);
 			
@@ -1794,28 +1738,36 @@ begin
         	end if;
         
     end process;
-		
-	ALU : entity ALU(behavioral) port map (
+    
+    -- ALU instantiation 
+    ALU : entity ALU(behavioral) port map (
 		instr => ALU_op,
 		rs1 => rs1_mux,
 		rs2 => rs2_mux,
 		rs3 => rs3_d,
 		rd => rd_d
-	);	
-	
-	rd_out <= rd_in;	-- Passes through this stage to write-back stage 
-	write_enable_out <= write_enable_in;
+	);	 
+    
+    -- Pipeline outputs
+    rd_out <= rd_in;	-- Pass through this stage to write-back stage
+    write_enable_out <= write_enable_in; 
 	
 end structural;
 
 
---------------
---Stage 4 Write Back
---------------
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-- STAGE 4 ---- STAGE 4 ---- STAGE 4 ---- STAGE 4 ---- STAGE 4 -- 
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+
+
 
 ------------------
--- Forward Unit --
-------------------
+-- Forward Unit		
+------------------ 
+
 library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all;
@@ -1847,7 +1799,6 @@ entity forwarding is
 	);
 end forwarding;
 
---}} End of automatically maintained section
 
 architecture behavioral of forwarding is  
 
@@ -1855,44 +1806,54 @@ begin
 
 	process(all) is	-- Only operating on rising clock edges unless reset is asserted
 	
-    begin 
+    begin  
+		
+		-- Values for no forwarding; will pass through if no conditions are met
+		forward_1 <= '0';
+		forward_2 <= '0';
+		forward_3 <= '0';	
+		
+		rs1_d <= (others => '0'); 
+		rs2_d <= (others => '0');
+		rs3_d <= (others => '0');
 
         if rd = rs1 then    
             forward_1 <= '1';
 			forward_2 <= '0';
 			forward_3 <= '0';
+			
 			rs1_d <= rd_d; 
 			rs2_d <= (others => '0'); 
-			rs3_d <= (others => '0');
+			rs3_d <= (others => '0'); 
+		end if;
 
-        elsif rd = rs2 then
-            forward_1 <= '0';
+        if rd = rs2 then
+           	forward_1 <= '0';
 			forward_2 <= '1';
-			forward_3 <= '0';
+			forward_3 <= '0';  
+			
 			rs1_d <= (others => '0'); 
 			rs2_d <= rd_d; 
-			rs3_d <= (others => '0');
+			rs3_d <= (others => '0'); 
+		end if;
 
-        elsif rd = rs3 then 
+        if rd = rs3 then 
             forward_1 <= '0';
 			forward_2 <= '0';
 			forward_3 <= '1';
+			
 			rs1_d <= (others => '0'); 
 			rs2_d <= (others => '0');
-			rs3_d <= rd_d;
-        else 
-            forward_1 <= '0';
-			forward_2 <= '0';
-			forward_3 <= '0';
-			rs1_d <= (others => '0'); 
-			rs2_d <= (others => '0');
-			rs3_d <= (others => '0');
-        end if;
+			rs3_d <= rd_d;	  
+		end if;
+		
     end process;
 
-end behavioral;
+end behavioral;	 
 
-
+-----------------------
+-- Stage 4 (write-back)
+-----------------------
 library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all;
@@ -1901,7 +1862,6 @@ use work.all;
 entity writeback is
 	port(	
 	
-		
 	-- Control signals
 	write_enable : in STD_LOGIC;				-- write enable
 	
@@ -1918,6 +1878,7 @@ entity writeback is
 	rd : in STD_LOGIC_VECTOR(4 downto 0);  		-- rd number
 	rd_d : in STD_LOGIC_VECTOR(127 downto 0);	-- rd data	
 	
+	-- Forward signals to send to execute stage
 	forward_1 : out STD_LOGIC;
 	forward_2 : out STD_LOGIC;
 	forward_3 : out STD_LOGIC
@@ -1925,14 +1886,9 @@ entity writeback is
 	);
 end writeback;
 
---}} End of automatically maintained section
-
 architecture structural of writeback is  
-
-
 begin 
-	
-	fw : entity forwarding(behavioral) port map (
+    fw : entity work.forwarding(behavioral) port map (
 		rs1 => rs1,
 		rs2 => rs2,
 		rs3 => rs3,
@@ -1949,15 +1905,13 @@ begin
 		forward_2 => forward_2,
 		forward_3 => forward_3
 		
-	);	  
+	);	
 	
 end structural;
-	
-	
-	--------------------
-	--EX/WB Pipeline Reg
-	--------------------
-	
+    
+---------------------------------------------
+-- EX/WB Pipeline Reg
+---------------------------------------------
 library IEEE;
 use IEEE.std_logic_1164.all; 
 use IEEE.numeric_std.all;
@@ -1980,8 +1934,6 @@ entity EXWB is
 		rd_d_out : out STD_LOGIC_VECTOR(127 downto 0)	   		-- rd_d output
 	);
 end EXWB;
-
---}} End of automatically maintained section
 
 architecture behavioral of EXWB is  
 
@@ -2014,9 +1966,15 @@ begin
 
 end behavioral;
 
----------------------------
---Final CPU STRUCTURAL UNIT----------
----------------------------
+
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+----------------------- FINAL CPU STRUCTURAL UNIT ------------------------
+-------------------------------------------------------------------------- 
+--------------------------------------------------------------------------
+
+
 
 library IEEE;
 use IEEE.std_logic_1164.all;
@@ -2025,165 +1983,80 @@ use work.CPU_Defs.all;
 use work.all;
 
 entity CPU is
-	port (
+	port (		
+	
 		clk : in std_logic;
 	 	reset : in std_logic;
-		 
-		 --Testbench Ports in order to load instruction buffer
-		 load_en : in std_logic;
-		 load_addr : in std_logic_vector(5 downto 0);
-		 load_data : in std_logic_vector(24 downto 0);
-		 
-		 --Creating a connection between Register File and testbench
-		 reg_file_contents: out REG_FILE_ARRAY_TYPE;
-		 
-		 --Ports for Testbench to create Result file
-			res_PC : out std_logic_vector(5 downto 0);
-			res_Instruction : out std_logic_vector(24 downto 0);
-			res_ALU_Result  : out std_logic_vector(127 downto 0);
-        	res_Forward_1   	: out std_logic;
+		
+		--Testbench Ports in order to load instruction buffer
+		load_en : in std_logic;
+		load_addr : in std_logic_vector(5 downto 0);
+		load_data : in std_logic_vector(24 downto 0);
+		
+		--Creating a connection between Register File and testbench
+		reg_file_contents: out REG_FILE_ARRAY_TYPE;
+		
+		--Ports for Testbench to create Result file
+		res_PC : out std_logic_vector(5 downto 0);
+		res_Instruction : out std_logic_vector(24 downto 0);
+		res_ALU_Result  : out std_logic_vector(127 downto 0);
+        res_Forward_1   	: out std_logic;
 		res_Forward_2   	: out std_logic;
 		res_Forward_3 	: out std_logic;
-        	res_WB_Data     : out std_logic_vector(127 downto 0);
-        	res_RegWrite    : out std_logic
+        res_WB_Data     : out std_logic_vector(127 downto 0);
+        res_RegWrite    : out std_logic	
+		
 		);
 end CPU;
 
---}} End of automatically maintained section
-
 architecture structural of CPU is
-	------------------------------
-	--Local Signals for Stage 1-Fetch
-	------------------------------	
-	signal s1_pc_out       : std_logic_vector(5 downto 0);
-    signal s1_instr_out    : std_logic_vector(24 downto 0);
-	
-		
-	------------------------------	
-	--Local Signals for IF/ID
-	------------------------------
-	
-		signal IF_data_in : std_logic_vector(24 downto 0);
-		signal IF_data_out : std_logic_vector(24 downto 0);
-		
-	------------------------------	
-	--Local Signals for Stage 2-Decode
-	------------------------------
-	
-		-- Control Signals
-    signal s2_write_en     : std_logic;
-    signal s2_alu_op       : std_logic_vector(4 downto 0);
-    signal s2_alu_src      : std_logic;
-    signal s2_is_load      : std_logic;
-    
-    -- Data Signals
-    signal s2_rs1_data     : std_logic_vector(127 downto 0);
-    signal s2_rs2_data     : std_logic_vector(127 downto 0);
-    signal s2_rs3_data     : std_logic_vector(127 downto 0);
-    
-    -- Addresses & Immediates
-    signal s2_rs1_addr     : std_logic_vector(4 downto 0);
-    signal s2_rs2_addr     : std_logic_vector(4 downto 0);
-    signal s2_rs3_addr     : std_logic_vector(4 downto 0);
-    signal s2_rd_addr      : std_logic_vector(4 downto 0);
-    signal s2_imm          : std_logic_vector(15 downto 0);
-    signal s2_ld_idx       : std_logic_vector(2 downto 0);
-	
-	signal res_s2_reg_file : REG_FILE_ARRAY_TYPE;
-	------------------------------	
-	--Local Signals for ID/EX
-	------------------------------
-	
-	signal ie_write_en     : std_logic;
-    signal ie_alu_op       : std_logic_vector(4 downto 0);
-    signal ie_alu_src      : std_logic;
-    signal ie_is_load      : std_logic;
-    
-    signal ie_rs1_data     : std_logic_vector(127 downto 0);
-    signal ie_rs2_data     : std_logic_vector(127 downto 0);
-    signal ie_rs3_data     : std_logic_vector(127 downto 0);
-    
-    signal ie_rs1_addr     : std_logic_vector(4 downto 0);
-    signal ie_rs2_addr     : std_logic_vector(4 downto 0);
-    signal ie_rs3_addr     : std_logic_vector(4 downto 0);
-    signal ie_rd_addr      : std_logic_vector(4 downto 0);
-    
-    signal ie_imm          : std_logic_vector(15 downto 0);
-    signal ie_ld_idx       : std_logic_vector(2 downto 0);
-		 
-	------------------------------
-	--Local Signals for Stage 3-Execute
-	------------------------------
-		
-	    signal s3_rd_addr :  STD_LOGIC_VECTOR(4 downto 0); --Register destination
-        signal s3_alu_result   :  STD_LOGIC_VECTOR(127 downto 0); --Register value
-		signal s3_write_en : std_logic;
-        
-		signal EX_we_in, EX_we_out : std_logic; -- Wires for the EX/WB Pipeline Register
-		
-	------------------------------	
-	--Local Signals for EX/WB
-	------------------------------
-		
-		-- Destination register number
-		signal ew_write_en: std_logic;
-		signal ew_rd_addr: std_logic_vector(4 downto 0);
-		signal ew_alu_result: std_logic_vector(127 downto 0); --rd
-		signal EX_rd_in : std_logic_vector(4 downto 0);
-		signal EX_rd_out : std_logic_vector(4 downto 0);
-		
-		signal EX_rd_d_in : std_logic_vector(127 downto 0);
-		signal EX_rd_d_out : std_logic_vector(127 downto 0);
-		
-	------------------------------	
-	--Local Signals for Forwarding Unit
-	------------------------------	
-	
-		-- Register numbers that are being read by current instruction
-		signal forward_rs1 :  STD_LOGIC_VECTOR(4 downto 0);	   			-- rs1 input
-		signal forward_rs2 :  STD_LOGIC_VECTOR(4 downto 0);	   			-- rs2 input
-		signal forward_rs3 :  STD_LOGIC_VECTOR(4 downto 0);	   			-- rs3 input
-		
-		-- Register that is being written to in last instruction
-		signal forward_rd :  STD_LOGIC_VECTOR(4 downto 0);	   			-- rd input
-		
-		-- Register values to forward to
-		signal forward_rs1_d :  STD_LOGIC_VECTOR(127 downto 0);	   		-- rs1_d output
-		signal forward_rs2_d :  STD_LOGIC_VECTOR(127 downto 0);	   		-- rs2_d output
-		signal forward_rs3_d :  STD_LOGIC_VECTOR(127 downto 0);	   		-- rs3_d output	
-		
-		-- Register value to forward
-		signal forward_rd_d :  STD_LOGIC_VECTOR(127 downto 0);			-- rd_d input 
-		
-		signal forward_1_ctrl_sig :  STD_LOGIC;								-- Forwarding MUX control signals
-		signal forward_2_ctrl_sig :  STD_LOGIC;
-		signal forward_3_ctrl_sig :  STD_LOGIC;
+	-- Signal Declarations 
 
-	-----------------------------------------
-	-- Local Signals for Stage 4 - Write-back
-	-----------------------------------------	 
+	-- Stage 1
 	
-		-- Control signals
-		signal WB_write_enable : STD_LOGIC;				-- write enable
+    signal s1_pc_out : std_logic_vector(5 downto 0);		-- PC out
+    signal s1_instr_out : std_logic_vector(24 downto 0);	-- Instruction out
 	
-		-- Read registers passed from ID stage
-		signal WB_rs1 : STD_LOGIC_VECTOR(4 downto 0); 		-- rs number
-		signal WB_rs2 : STD_LOGIC_VECTOR(4 downto 0);
-		signal WB_rs3 : STD_LOGIC_VECTOR(4 downto 0);		 
-		
-		signal WB_rs1_d : STD_LOGIC_VECTOR(127 downto 0);	-- rs data
-		signal WB_rs2_d : STD_LOGIC_VECTOR(127 downto 0);
-		signal WB_rs3_d : STD_LOGIC_VECTOR(127 downto 0);
-		
-		-- Write registers from EX stage
-		signal WB_rd : STD_LOGIC_VECTOR(4 downto 0);  		-- rd number
-		signal WB_rd_d : STD_LOGIC_VECTOR(127 downto 0);		-- rd data	
-begin
-   
-	------------
-	--STAGE 1---
-	------------
-	S1: entity stage_1
+	-- IF/ID 
+    signal IF_data_in : std_logic_vector(24 downto 0);	
+	
+	-- Stage 2
+    signal s2_write_en, s2_alu_src, s2_is_load : std_logic;		-- Control signals
+    signal s2_alu_op : std_logic_vector(4 downto 0);			-- ALU op
+    signal s2_rs1_data, s2_rs2_data, s2_rs3_data : std_logic_vector(127 downto 0);	-- Read register data
+    signal s2_rs1_addr, s2_rs2_addr, s2_rs3_addr, s2_rd_addr : std_logic_vector(4 downto 0);	-- Read register addresses
+    signal s2_imm : std_logic_vector(15 downto 0);	-- Imm for LI
+    signal s2_ld_idx : std_logic_vector(2 downto 0);	-- index for LI
+    signal res_s2_reg_file : REG_FILE_ARRAY_TYPE;	-- Result
+	
+	-- ID/EX
+    signal ie_write_en, ie_alu_src, ie_is_load : std_logic;	-- Control signals
+    signal ie_alu_op : std_logic_vector(4 downto 0);	-- ALU op
+    signal ie_rs1_data, ie_rs2_data, ie_rs3_data : std_logic_vector(127 downto 0);	-- Read register data
+    signal ie_rs1_addr, ie_rs2_addr, ie_rs3_addr, ie_rd_addr : std_logic_vector(4 downto 0);	-- Read register addresses
+    signal ie_imm : std_logic_vector(15 downto 0);	-- imm for LI
+    signal ie_ld_idx : std_logic_vector(2 downto 0);	-- index for LI
+   	
+	-- Stage 3
+    signal s3_rd_addr : STD_LOGIC_VECTOR(4 downto 0);	-- Write register address
+    signal s3_alu_result : STD_LOGIC_VECTOR(127 downto 0);	-- ALU result (write register data)
+    signal s3_write_en : std_logic;	-- Write enable control signal
+	
+	-- EX/WB
+    signal EX_rd_in, EX_rd_out : std_logic_vector(4 downto 0);	-- Write register address
+    signal EX_rd_d_in, EX_rd_d_out : std_logic_vector(127 downto 0);	-- Write register data
+    signal EX_we_in, EX_we_out : std_logic;	-- Write enable
+	
+	-- Forwarding between Stage 4 and Stage 3
+    signal forward_rs1_d, forward_rs2_d, forward_rs3_d : STD_LOGIC_VECTOR(127 downto 0);	-- Forwarded data if forward_x = '1'
+    signal forward_1_ctrl_sig, forward_2_ctrl_sig, forward_3_ctrl_sig : STD_LOGIC;	-- Forward control signals for each read register
+
+begin 
+	
+    ------------
+    -- STAGE 1 (Fetch)
+    ------------
+    S1: entity stage_1
 		port map (
 			clk => clk,
 			reset => reset,
@@ -2209,172 +2082,190 @@ begin
 			data_out => IF_data_in   --Will be used to connect to stage 2
 		); 
 		
-	------------
-	--STAGE 2---
-	------------
-	S2: entity stage_2
-		port map (
-			clk => clk,
-			reset => reset,
-			
-			--Input from IF/ID
-			instr_in => IF_data_in,
-			
-			--Inputs from Writeback CHANGE	based on Stage 3/4
-			wb_reg_write  =>  EX_we_out,              --ew_write_en,
-            wb_dest_addr  => ew_rd_addr,
-            wb_write_data => ew_alu_result,
-			
-			-- Control Outputs
-			--wb_reg_write  => EX_we_out,  
---            wb_dest_addr  => EX_rd_out,  
---            wb_write_data => EX_rd_d_out, 
-            
-            ctrl_write_en => s2_write_en, ctrl_alu_op => s2_alu_op, ctrl_alu_src => s2_alu_src, ctrl_is_load => s2_is_load,
-            rs1_data => s2_rs1_data, rs2_data => s2_rs2_data, rs3_data => s2_rs3_data,
-            rs1_addr_out => s2_rs1_addr, rs2_addr_out => s2_rs2_addr, rs3_addr_out => s2_rs3_addr, 
-            rd_addr_out => s2_rd_addr, imm_out => s2_imm, ld_idx_out => s2_ld_idx,
-            reg_file_out => res_s2_reg_file												            --ctrl_write_en => s2_write_en,
-															--            ctrl_alu_op   => s2_alu_op,
-															--            ctrl_alu_src  => s2_alu_src,
-															--            ctrl_is_load  => s2_is_load,
-															--			
-															--			-- Data Outputs
-															--            rs1_data      => s2_rs1_data,
-															--            rs2_data      => s2_rs2_data,
-															--            rs3_data      => s2_rs3_data,
-															--            
-															--            -- Address/Immediate Outputs
-															--            rs1_addr_out  => s2_rs1_addr,
-															--            rs2_addr_out  => s2_rs2_addr,
-															--            rs3_addr_out  => s2_rs3_addr,
-															--            rd_addr_out   => s2_rd_addr,
-															--            imm_out       => s2_imm,
-															--            ld_idx_out    => s2_ld_idx,
-															--			
-															--			reg_file_out => res_s2_reg_file
-		);
+    ------------
+    -- STAGE 2 (Decode)
+    ------------
+    S2: entity stage_2
+        port map (	
 		
-	----------------
-	--PIPELINE ID/EX
-	----------------
-	
-	RegIDEX: entity IDEX
-		port map (
-			clk              => clk,
-            reset            => reset,
-            
-            write_enable_in  => s2_write_en,  write_enable_out => ie_write_en,
-            ALU_op_in        => s2_alu_op,    ALU_op_out       => ie_alu_op,
-            ALU_source_in    => s2_alu_src,   ALU_source_out   => ie_alu_src,
-            is_load_in       => s2_is_load,   is_load_out      => ie_is_load,
-            
-            rs1_in           => s2_rs1_addr,  rs1_out          => ie_rs1_addr,
-            rs2_in           => s2_rs2_addr,  rs2_out          => ie_rs2_addr,
-            rs3_in           => s2_rs3_addr,  rs3_out          => ie_rs3_addr,
-            rd_in            => s2_rd_addr,   rd_out           => ie_rd_addr,
-            
-            rs1_d_in         => s2_rs1_data,  rs1_d_out        => ie_rs1_data,
-            rs2_d_in         => s2_rs2_data,  rs2_d_out        => ie_rs2_data,
-            rs3_d_in         => s2_rs3_data,  rs3_d_out        => ie_rs3_data,
-            
-            imm_in           => s2_imm,       imm_out          => ie_imm,
-            ind_in           => s2_ld_idx,    ind_out          => ie_ld_idx
-		);
+			clk => clk, 
+			reset => reset, 
+			
+			-- Input for IF/ID
+			instr_in => IF_data_in,	
 		
+		   	-- Inputs from WB
+            wb_reg_write  => EX_we_out,  
+            wb_dest_addr  => EX_rd_out,  
+            wb_write_data => EX_rd_d_out, 
+			
+			-- Control Signals
+            ctrl_write_en => s2_write_en, 
+			ctrl_alu_op => s2_alu_op, 
+			ctrl_alu_src => s2_alu_src, 
+			ctrl_is_load => s2_is_load,
+			
+			-- Data Outputs
+            rs1_data => s2_rs1_data, 
+			rs2_data => s2_rs2_data, 
+			rs3_data => s2_rs3_data,	
+			
+			-- Address/Immediate Outputs
+            rs1_addr_out => s2_rs1_addr, 
+			rs2_addr_out => s2_rs2_addr, 
+			rs3_addr_out => s2_rs3_addr, 
+            rd_addr_out => s2_rd_addr, 
+			imm_out => s2_imm, 
+			ld_idx_out => s2_ld_idx,
+			
+			-- Result signal
+            reg_file_out => res_s2_reg_file
+        );
+        
+    RegIDEX: entity IDEX
+        port map (	
 		
-	Stage_ALU: entity execute
-		port map (
-			--Control Inputs
-			write_enable_in => ie_write_en,
+			clk => clk, 
+			reset => reset,	  
+			
+			-- Control Signals
+            write_enable_in => s2_write_en, 
+			write_enable_out => ie_write_en,
+            ALU_op_in => s2_alu_op, 
+			ALU_op_out => ie_alu_op,
+            ALU_source_in => s2_alu_src, 
+			ALU_source_out => ie_alu_src,
+            is_load_in => s2_is_load, 
+			is_load_out => ie_is_load, 
+			
+			-- Address outputs
+            rs1_in => s2_rs1_addr, 
+			rs1_out => ie_rs1_addr,
+            rs2_in => s2_rs2_addr, 
+			rs2_out => ie_rs2_addr,
+            rs3_in => s2_rs3_addr, 
+			rs3_out => ie_rs3_addr,	
+			
+            rd_in => s2_rd_addr, 
+			rd_out => ie_rd_addr, 
+			
+			-- Data outputs
+            rs1_d_in => s2_rs1_data, 
+			rs1_d_out => ie_rs1_data,
+            rs2_d_in => s2_rs2_data, 
+			rs2_d_out => ie_rs2_data,
+            rs3_d_in => s2_rs3_data, 
+			rs3_d_out => ie_rs3_data, 
+			
+			-- LI outputs
+            imm_in => s2_imm, 
+			imm_out => ie_imm,
+            ind_in => s2_ld_idx, 
+			ind_out => ie_ld_idx
+        );
+        
+    ------------
+    -- STAGE 3 (Execute)
+    ------------
+    Stage_ALU: entity execute
+        port map (	
+		
+			write_enable_in => ie_write_en, 
 			write_enable_out => s3_write_en,
+			
+			-- ALU op
 			ALU_op => ie_alu_op,
-			ALU_source => ie_alu_src,
-			is_load => ie_is_load,
 			
-			--Forwarding input control
-			forward_1 => forward_1_ctrl_sig,
-			forward_2 => forward_2_ctrl_sig,
-			forward_3 => forward_3_ctrl_sig,
+			-- Control signals
+			ALU_source => ie_alu_src, 
+			is_load => ie_is_load,	
 			
-			--Register address inputs
-			rs1 => ie_rs1_addr,
-			rs2 => ie_rs2_addr,
+			-- Forward signals
+			forward_1 => forward_1_ctrl_sig, 
+			forward_2 => forward_2_ctrl_sig, 
+			forward_3 => forward_3_ctrl_sig, 
+			
+			-- Address outputs
+			rs1 => ie_rs1_addr, 
+			rs2 => ie_rs2_addr, 
 			rs3 => ie_rs3_addr,
-			
-			--Data inputs with No Forwarding
-			rs1_d => ie_rs1_data,
-			rs2_d => ie_rs2_data,
-			rs3_d => ie_rs3_data,
-			
-			--Forwarded Data Inputs from Stage 4
-			rs1_df => forward_rs1_d,
-			rs2_df => forward_rs2_d,
-			rs3_df => forward_rs3_d,
-			
-			--Destination
-			rd_in => ie_rd_addr,
+			rd_in => ie_rd_addr, 
 			rd_out => s3_rd_addr,
+			
+			-- Data outputs
+			rs1_d => ie_rs1_data, 
+			rs2_d => ie_rs2_data, 
+			rs3_d => ie_rs3_data,  
 			rd_d => s3_alu_result,
 			
-			--Immediates
-			imm => ie_imm,
+			-- Forwarded data outputs
+			rs1_df => forward_rs1_d, 
+			rs2_df => forward_rs2_d, 
+			rs3_df => forward_rs3_d,
+			 
+			imm => ie_imm, 
 			ind => ie_ld_idx
-		);
+        );
+        
+    -- Connect EX/WB inputs
+    EX_rd_in <= s3_rd_addr;
+    EX_rd_d_in <= s3_alu_result;
+    EX_we_in <= s3_write_en;
+
+    RegEXWB: entity EXWB
+        port map (
 		
-	EX_rd_in <= s3_rd_addr;
-	EX_rd_d_in <= s3_alu_result;
-	EX_we_in <= s3_write_en;
+		clk => clk,
+		reset => reset,
 		
-	RegEXWB: entity EXWB
-		port map (
-			reset 	=> reset,
-			clk 	=> clk,
+		-- Address output
+		rd_in => EX_rd_in, 
+		rd_out => EX_rd_out,
+		
+		-- Data output
+		rd_d_in => EX_rd_d_in, 
+		rd_d_out => EX_rd_d_out,
+		
+		-- Write enable
+		write_enable_in => EX_we_in, 
+		write_enable_out => EX_we_out
+        ); 
+        
+    ------------
+    -- STAGE 4 (Writeback / Forwarding)
+    ------------
+    Stage_WB: entity writeback
+        port map ( 
+		
+			write_enable => EX_we_out, -- CONNECTED to Pipeline Register  
+		
+			-- Address outputs
+            rs1 => ie_rs1_addr, 
+			rs2 => ie_rs2_addr, 
+			rs3 => ie_rs3_addr, 
+			rd => EX_rd_out, 
 			
-			rd_in 		=> EX_rd_in,
-			rd_out 		=> EX_rd_out,
-							      
-			rd_d_in 		=> EX_rd_d_in,
-			rd_d_out 	=> EX_rd_d_out,
+			-- Data outputs
+            rs1_d => forward_rs1_d, 
+			rs2_d => forward_rs2_d, 
+			rs3_d => forward_rs3_d,          
+			rd_d => EX_rd_d_out,  
 			
-			write_enable_in => EX_we_in, 
-            write_enable_out => EX_we_out
-		
-		); 
-		
-	Stage_WB: entity writeback
-		port map ( 
-			write_enable	=> EX_we_out,              --ew_write_en,
-                   
-			rs1    			=> ie_rs1_addr,	
-			rs2    			=> ie_rs2_addr,
-			rs3    	   		=> ie_rs3_addr,	
-			        
-			rs1_d  			=> forward_rs1_d,
-			rs2_d  			=> forward_rs2_d,
-			rs3_d  			=> forward_rs3_d,
-			         
-			rd     			=> ew_rd_addr, 
-			rd_d			=> ew_alu_result, 
-			
-			forward_1 => forward_1_ctrl_sig,
-			forward_2 => forward_2_ctrl_sig,
+			-- Forward control signals
+            forward_1 => forward_1_ctrl_sig, 
+			forward_2 => forward_2_ctrl_sig, 
 			forward_3 => forward_3_ctrl_sig
-	
-		);
-		
-		--Outputs for results file creation
-		res_PC <= s1_pc_out;
-		res_Instruction <= 	 IF_data_in;
-		res_ALU_Result  <= 	 s3_alu_result;
-		res_WB_Data     <= EX_rd_d_out; 
-    	res_RegWrite    <= EX_we_out;									    --res_WB_Data     <= 	 ew_alu_result;
-											    --res_RegWrite    <= 	 ew_write_en;
-	    res_Forward_1	    <=   forward_1_ctrl_sig; 
-		res_Forward_2	    <=   forward_2_ctrl_sig; 
-		res_Forward_3	    <=   forward_3_ctrl_sig; 
-		
-		reg_file_contents <= res_s2_reg_file;
-		
-		
+        );
+        
+    -- Outputs
+    res_PC <= s1_pc_out;
+    res_Instruction <= IF_data_in;
+    res_ALU_Result  <= s3_alu_result;
+    res_WB_Data     <= EX_rd_d_out; 
+    res_RegWrite    <= EX_we_out; 
+    res_Forward_1     <= forward_1_ctrl_sig; 
+	res_Forward_2     <= forward_2_ctrl_sig; 
+	res_Forward_3     <= forward_3_ctrl_sig; 
+    reg_file_contents <= res_s2_reg_file;
+        
 end structural;
