@@ -1,8 +1,32 @@
-li r1 10 0
-li r2 3 0
-li r3 4 0
-simals r4 r1 r2 r3
-slimals r5 r1 r2 r3
-au r6 r1 r2
-clzw r7 r1
+li r1 1 0
+li r2 2 0
+li r3 3 0
+li r4 4 0
+li r5 5 0
+li r6 6 0
+li r7 7 0
+li r8 8 0
+simals r9 r1 r2 r3
+simahs r10 r1 r2 r3
+simsls r11 r1 r2 r3
+simshs r12 r1 r2 r3
+slimals r13 r1 r2 r3
+slimahs r14 r1 r2 r3
+slimsls r15 r1 r2 r3
+slimshs r16 r1 r2 r3
+shrhi r17 r1 5
+au r18 r1 r2
+cnt1h r19 r1
+ahs r20 r1 r2
+or r21 r1 r2
+bcw r22 r1 r0
+maxws r23 r1 r2
+minws r24 r1 r2
+mlhu r25 r1 r2
+mlhcu r26 r1 12
+and r27 r1 r2
+clzw r28 r1
+rotw r29 r1 r2
+sfwu r30 r1 r2
+sfhs r31 r1 r2
 nop
